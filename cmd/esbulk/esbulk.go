@@ -2,64 +2,79 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"sync"
 
-	"github.com/belogik/goes"
-	"github.com/miku/esmlt"
-	"github.com/miku/stardust"
+	"github.com/miku/esbulk"
 )
 
+// Options represents bulk indexing options
 type Options struct {
 	Host      string
-	Port      string
+	Port      int
 	Index     string
 	DocType   string
 	BatchSize int
 }
 
-func Worker(id string, options Options, lines chan *[]byte, wg *sync.WaitGroup) {
-	defer wg.Done()
-	conn := goes.NewConnection(options.Host, options.Port)
-	counter := 0
-	var source map[string]interface{}
-	var documents []goes.Document
-	for b := range lines {
-		json.Unmarshal(*b, &source)
-		doc := goes.Document{
-			Id:          esmlt.Value("content.001", source),
-			Index:       options.Index,
-			Type:        options.DocType,
-			BulkCommand: goes.BULK_COMMAND_INDEX,
-			Fields:      source,
+// BulkIndex takes a list of documents as strings and indexes them into elasticsearch
+func BulkIndex(docs []string, host string, port int, index, docType string) error {
+	url := fmt.Sprintf("http://%s:%d/%s/%s/_bulk", host, port, index, docType)
+	var buf bytes.Buffer
+	for _, doc := range docs {
+		if len(doc) == 0 {
+			continue
 		}
-		documents = append(documents, doc)
-		counter++
+		buf.WriteString(`{"index": {}}`)
+		buf.WriteString("\n")
+		buf.WriteString(doc)
+		buf.WriteString("\n")
+	}
+	buf.WriteString("\n")
+	_, err := http.Post(url, "application/json", bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Worker will batch index documents that come in on the lines channel
+func Worker(id string, options Options, lines chan *string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	var docs []string
+	counter := 0
+	for s := range lines {
+		docs = append(docs, *s)
+		counter += 1
 		if counter%options.BatchSize == 0 {
-			fmt.Printf("[%s] Bulk indexing batch... %d\n", id, counter)
-			_, err := conn.BulkSend(documents)
-			fmt.Printf("[%s] Bulk sent.\n", id)
+			err := BulkIndex(docs, options.Host, options.Port, options.Index, options.DocType)
 			if err != nil {
 				log.Fatal(err)
 			}
-			documents = documents[:0]
+			docs = docs[:0]
 		}
+	}
+	err := BulkIndex(docs, options.Host, options.Port, options.Index, options.DocType)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
 func main() {
+
 	version := flag.Bool("v", false, "prints current program version")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	indexName := flag.String("index", "", "index name")
 	docType := flag.String("type", "default", "type")
-	esHost := flag.String("host", "localhost", "elasticsearch host")
-	esPort := flag.String("port", "9200", "elasticsearch port")
+	host := flag.String("host", "localhost", "elasticsearch host")
+	port := flag.Int("port", 9200, "elasticsearch port")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
 	numWorkers := flag.Int("w", runtime.NumCPU(), "number of workers to use")
 
@@ -80,7 +95,7 @@ func main() {
 	}
 
 	if *version {
-		fmt.Println(stardust.Version)
+		fmt.Println(esbulk.Version)
 		os.Exit(0)
 	}
 
@@ -89,32 +104,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	filename := flag.Args()[0]
-
-	var file *os.File
-	var err error
-	if filename == "-" {
-		file = os.Stdin
-	} else {
-		file, err = os.Open(filename)
-		defer file.Close()
-		if err != nil {
-			log.Fatalln(err)
-		}
+	if *indexName == "" {
+		log.Fatal("index name required")
 	}
+
+	file, err := os.Open(flag.Args()[0])
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer file.Close()
 
 	runtime.GOMAXPROCS(*numWorkers)
 
 	options := Options{
-		Host:      *esHost,
-		Port:      *esPort,
+		Host:      *host,
+		Port:      *port,
 		Index:     *indexName,
 		DocType:   *docType,
 		BatchSize: *batchSize,
 	}
 
-	queue := make(chan *[]byte)
+	queue := make(chan *string)
 	var wg sync.WaitGroup
+
 	for i := 0; i < *numWorkers; i++ {
 		wg.Add(1)
 		go Worker(fmt.Sprintf("worker-%d", i), options, queue, &wg)
@@ -122,8 +134,8 @@ func main() {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		b := scanner.Bytes()
-		queue <- &b
+		s := scanner.Text()
+		queue <- &s
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -132,5 +144,4 @@ func main() {
 
 	close(queue)
 	wg.Wait()
-	return
 }
