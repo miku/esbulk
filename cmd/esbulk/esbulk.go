@@ -51,14 +51,11 @@ func BulkIndex(docs []string, options Options) error {
 // Worker will batch index documents that come in on the lines channel
 func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	// var docs []string
-	docs := make([]string, options.BatchSize)
+	var docs []string
 	counter := 0
-	idx := 0
 	for s := range lines {
-		docs[idx] = s
+		docs = append(docs, s)
 		counter++
-		idx++
 		if counter%options.BatchSize == 0 {
 			err := BulkIndex(docs, options)
 			if err != nil {
@@ -67,10 +64,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 			if !options.Quiet {
 				fmt.Fprintf(os.Stderr, "[%s] @%d\n", id, counter)
 			}
-			for i, _ := range docs {
-				docs[i] = ""
-			}
-			idx = 0
+			docs = docs[:0]
 		}
 	}
 	err := BulkIndex(docs, options)
