@@ -22,6 +22,7 @@ type Options struct {
 	Index     string
 	DocType   string
 	BatchSize int
+	Quiet     bool
 }
 
 // BulkIndex takes a list of documents as strings and indexes them into elasticsearch
@@ -41,6 +42,7 @@ func BulkIndex(docs []string, options Options) error {
 		return err
 	}
 	// > Caller should close resp.Body when done reading from it.
+	// Results in a resource leak otherwise.
 	response.Body.Close()
 	return nil
 }
@@ -61,7 +63,9 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Fprintf(os.Stderr, "[%s] @%d\n", id, counter)
+			if !options.Quiet {
+				fmt.Fprintf(os.Stderr, "[%s] @%d\n", id, counter)
+			}
 			for i, _ := range docs {
 				docs[i] = ""
 			}
@@ -81,10 +85,11 @@ func main() {
 	memprofile := flag.String("memprofile", "", "write heap profile to file")
 	indexName := flag.String("index", "", "index name")
 	docType := flag.String("type", "default", "type")
-	host := flag.String("host", "0.0.0.0", "elasticsearch host")
+	host := flag.String("host", "localhost", "elasticsearch host")
 	port := flag.Int("port", 9200, "elasticsearch port")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
 	numWorkers := flag.Int("w", runtime.NumCPU(), "number of workers to use")
+	quiet := flag.Bool("q", false, "do not produce any output")
 
 	var PrintUsage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] JSON\n", os.Args[0])
@@ -130,6 +135,7 @@ func main() {
 		Index:     *indexName,
 		DocType:   *docType,
 		BatchSize: *batchSize,
+		Quiet: 	   *quiet,
 	}
 
 	queue := make(chan string)

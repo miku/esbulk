@@ -15,10 +15,11 @@ Usage
 
     $ esbulk -h
       -cpuprofile="": write cpu profile to file
-      -host="0.0.0.0": elasticsearch host
+      -host="localhost": elasticsearch host
       -index="": index name
       -memprofile="": write heap profile to file
       -port=9200: elasticsearch port
+      -q=false: do not produce any output
       -size=1000: bulk batch size
       -type="default": type
       -v=false: prints current program version
