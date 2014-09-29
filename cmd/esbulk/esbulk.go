@@ -135,7 +135,7 @@ func main() {
 		Index:     *indexName,
 		DocType:   *docType,
 		BatchSize: *batchSize,
-		Quiet: 	   *quiet,
+		Quiet:     *quiet,
 	}
 
 	queue := make(chan string)
@@ -144,6 +144,12 @@ func main() {
 	for i := 0; i < *numWorkers; i++ {
 		wg.Add(1)
 		go Worker(fmt.Sprintf("worker-%d", i), options, queue, &wg)
+	}
+
+	// set refresh inteval to -1
+	_, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), strings.NewReader(`{"index": {"refresh_interval": "-1"}}`))
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -158,6 +164,13 @@ func main() {
 
 	close(queue)
 	wg.Wait()
+
+	defer func() {
+		_, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), strings.NewReader(`{"index": {"refresh_interval": "1s"}}`))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
