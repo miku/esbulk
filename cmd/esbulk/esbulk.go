@@ -71,6 +71,9 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if !options.Quiet {
+		fmt.Fprintf(os.Stderr, "[%s] @%d\n", id, counter)
+	}
 }
 
 func main() {
