@@ -61,12 +61,11 @@ func Worker(id string, options Options, lines chan *string, wg *sync.WaitGroup) 
 			docs = docs[:0]
 		}
 	}
-	fmt.Printf("[%s] Bulk indexing last batch... %d\n", id, counter)
-	_, err := conn.BulkSend(documents)
-	fmt.Printf("[%s] Bulk sent.\n", id)
+	err := BulkIndex(docs, options.Host, options.Port, options.Index, options.DocType)
 	if err != nil {
 		log.Fatal(err)
 	}
+	docs = docs[:0]
 }
 
 func main() {
