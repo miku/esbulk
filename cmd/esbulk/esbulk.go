@@ -25,20 +25,24 @@ type Options struct {
 }
 
 // BulkIndex takes a list of documents as strings and indexes them into elasticsearch
-func BulkIndex(docs []string, host string, port int, index, docType string) error {
+func BulkIndex(docs *[]string, host string, port int, index, docType string) error {
 	url := fmt.Sprintf("http://%s:%d/%s/%s/_bulk", host, port, index, docType)
 	var buf bytes.Buffer
-	for _, doc := range docs {
+	for _, doc := range *docs {
 		if len(doc) == 0 {
 			continue
 		}
-		buf.WriteString(`{"index": {}}`)
-		buf.WriteString("\n")
+		buf.WriteString(`{"index": {}}\n`)
 		buf.WriteString(doc)
 		buf.WriteString("\n")
 	}
 	buf.WriteString("\n")
-	_, err := http.Post(url, "application/json", bytes.NewReader(buf.Bytes()))
+	response, err := http.Post(url, "application/json", bytes.NewReader(buf.Bytes()))
+	buf.Reset()
+
+	if response.StatusCode >= 300 {
+		return err
+	}
 	if err != nil {
 		return err
 	}
@@ -54,14 +58,14 @@ func Worker(id string, options Options, lines chan *string, wg *sync.WaitGroup) 
 		docs = append(docs, *s)
 		counter += 1
 		if counter%options.BatchSize == 0 {
-			err := BulkIndex(docs, options.Host, options.Port, options.Index, options.DocType)
+			err := BulkIndex(&docs, options.Host, options.Port, options.Index, options.DocType)
 			if err != nil {
 				log.Fatal(err)
 			}
 			docs = docs[:0]
 		}
 	}
-	err := BulkIndex(docs, options.Host, options.Port, options.Index, options.DocType)
+	err := BulkIndex(&docs, options.Host, options.Port, options.Index, options.DocType)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,6 +76,7 @@ func main() {
 
 	version := flag.Bool("v", false, "prints current program version")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile := flag.String("memprofile", "", "write heap profile to file")
 	indexName := flag.String("index", "", "index name")
 	docType := flag.String("type", "default", "type")
 	host := flag.String("host", "localhost", "elasticsearch host")
@@ -145,4 +150,13 @@ func main() {
 
 	close(queue)
 	wg.Wait()
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
 }
