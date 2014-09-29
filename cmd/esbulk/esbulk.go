@@ -31,7 +31,7 @@ func BulkIndex(docs []string, options Options) error {
 	header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
-		if len(doc) == 0 {
+		if len(strings.TrimSpace(doc)) == 0 {
 			continue
 		}
 		lines = append(lines, header)
