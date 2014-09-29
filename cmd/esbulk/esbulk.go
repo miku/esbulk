@@ -28,12 +28,13 @@ type Options struct {
 // BulkIndex takes a list of documents as strings and indexes them into elasticsearch
 func BulkIndex(docs []string, options Options) error {
 	url := fmt.Sprintf("http://%s:%d/%s/%s/_bulk", options.Host, options.Port, options.Index, options.DocType)
+	header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
 		if len(doc) == 0 {
 			continue
 		}
-		lines = append(lines, fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType))
+		lines = append(lines, header)
 		lines = append(lines, doc)
 	}
 	body := fmt.Sprintf("%s\n", strings.Join(lines, "\n"))
