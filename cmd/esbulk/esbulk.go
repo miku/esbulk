@@ -168,6 +168,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		_, err = http.Post(fmt.Sprintf("http://%s:%d/%s/_flush", *host, *port, *indexName), "", nil)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	if *memprofile != "" {
