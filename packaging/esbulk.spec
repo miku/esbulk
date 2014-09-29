@@ -1,6 +1,6 @@
 Summary:    Fast parallel bulk loading utility for elasticsearch.
 Name:       esbulk
-Version:    0.1.0
+Version:    0.2.0
 Release:    0
 License:    MIT
 BuildArch:  x86_64
@@ -46,5 +46,8 @@ rm -rf %{_topdir}/BUILD/%{name}
 
 
 %changelog
+* Mon Sep 29 2014 Martin Czygan
+- 0.2 release, fixed memory leak by closing `response.Body`
+
 * Tue Aug 26 2014 Martin Czygan
 - 0.1 release
