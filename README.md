@@ -8,6 +8,8 @@ Installation
 
     $ go get github.com/miku/esbulk/cmd/esbulk
 
+For `deb` or `rpm` packages, see: https://github.com/miku/esbulk/releases
+
 Usage
 -----
 
