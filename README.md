@@ -21,7 +21,7 @@ Usage
       -port=9200: elasticsearch port
       -q=false: do not produce any output
       -size=1000: bulk batch size
-      -type="default": type
+      -type="default": elasticsearch doc type
       -v=false: prints current program version
       -w=4: number of workers to use
 
