@@ -27,7 +27,13 @@ Usage
 
 To index a JSON file, that contains one document per line, just run:
 
-    $ esbulk -index my-index file.ldj
+    $ esbulk -index example file.ldj
 
-This will use as many parallel workers, as there are cores. To optimize
-the indexing process, adjust the `size` and `w` parameters.
+Where `file.ldj` is line delimited JSON, like:
+
+    {"name": "esbulk", "version": "0.2.4"}
+    {"name": "estab", "version": "0.1.3"}
+    ...
+
+By default `esbulk` will use as many parallel workers, as there are cores.
+To tweak the indexing process, adjust the `size` and `w` parameters.

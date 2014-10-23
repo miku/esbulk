@@ -82,7 +82,7 @@ func main() {
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write heap profile to file")
 	indexName := flag.String("index", "", "index name")
-	docType := flag.String("type", "default", "type")
+	docType := flag.String("type", "default", "elasticsearch doc type")
 	host := flag.String("host", "localhost", "elasticsearch host")
 	port := flag.Int("port", 9200, "elasticsearch port")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
