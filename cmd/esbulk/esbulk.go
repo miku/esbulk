@@ -87,8 +87,45 @@ func main() {
 		go esbulk.Worker(fmt.Sprintf("worker-%d", i), options, queue, &wg)
 	}
 
+	client := &http.Client{}
+
+	defer func() {
+		r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
+		req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp, err := client.Do(req)
+		log.Printf("setting index.refresh_interval to 1s: %s\n", resp.Status)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp, err = http.Post(fmt.Sprintf("http://%s:%d/%s/_flush", *host, *port, *indexName), "", nil)
+		log.Printf("index flush: %s\n", resp.Status)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	// create index if not exists
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/", *host, *port, *indexName), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err := client.Do(req)
+	log.Printf("creating index: %s\n", resp.Status)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// set refresh inteval to -1
-	_, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), strings.NewReader(`{"index": {"refresh_interval": "-1"}}`))
+	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
+	req, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err = client.Do(req)
+	log.Printf("setting index.refresh_interval to -1: %s\n", resp.Status)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,17 +158,6 @@ func main() {
 	close(queue)
 	wg.Wait()
 	elapsed := time.Since(start)
-
-	defer func() {
-		_, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), strings.NewReader(`{"index": {"refresh_interval": "1s"}}`))
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = http.Post(fmt.Sprintf("http://%s:%d/%s/_flush", *host, *port, *indexName), "", nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
