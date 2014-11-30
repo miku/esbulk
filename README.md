@@ -14,16 +14,18 @@ Usage
 -----
 
     $ esbulk -h
+    Usage: esbulk [OPTIONS] JSON
       -cpuprofile="": write cpu profile to file
       -host="localhost": elasticsearch host
       -index="": index name
       -memprofile="": write heap profile to file
       -port=9200: elasticsearch port
-      -q=false: do not produce any output
       -size=1000: bulk batch size
       -type="default": elasticsearch doc type
       -v=false: prints current program version
+      -verbose=false: output basic progress
       -w=4: number of workers to use
+      -z=false: unzip gz'd file on the fly
 
 To index a JSON file, that contains one document per line, just run:
 
@@ -36,4 +38,8 @@ Where `file.ldj` is line delimited JSON, like:
     ...
 
 By default `esbulk` will use as many parallel workers, as there are cores.
-To tweak the indexing process, adjust the `size` and `w` parameters.
+To tweak the indexing process, adjust the `-size` and `-w` parameters.
+
+You can index from gzipped files as well, using the `-z` flag:
+
+    $ esbulk -z -index example file.ldj.gz
