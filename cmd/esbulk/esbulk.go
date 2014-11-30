@@ -66,7 +66,7 @@ func main() {
 
 	runtime.GOMAXPROCS(*numWorkers)
 
-	options := Options{
+	options := esbulk.Options{
 		Host:      *host,
 		Port:      *port,
 		Index:     *indexName,
