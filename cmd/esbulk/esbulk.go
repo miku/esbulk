@@ -13,6 +13,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/miku/esbulk"
 )
@@ -101,6 +102,9 @@ func main() {
 		reader = bufio.NewReader(zreader)
 	}
 
+	counter := 0
+	start := time.Now()
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err == io.EOF {
@@ -111,10 +115,12 @@ func main() {
 		}
 		line = strings.TrimSpace(line)
 		queue <- line
+		counter += 1
 	}
 
 	close(queue)
 	wg.Wait()
+	elapsed := time.Since(start)
 
 	defer func() {
 		_, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), strings.NewReader(`{"index": {"refresh_interval": "1s"}}`))
@@ -134,5 +140,10 @@ func main() {
 		}
 		pprof.WriteHeapProfile(f)
 		f.Close()
+	}
+
+	if *verbose {
+		rate := float64(counter) / elapsed.Seconds()
+		log.Printf("%d docs in %s at %0.3f docs/s with %d workers\n", counter, elapsed, rate, *numWorkers)
 	}
 }
