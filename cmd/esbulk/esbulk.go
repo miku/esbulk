@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"compress/gzip"
 	"flag"
 	"fmt"
 	"io"
@@ -28,6 +29,7 @@ func main() {
 	batchSize := flag.Int("size", 1000, "bulk batch size")
 	numWorkers := flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	quiet := flag.Bool("q", false, "do not produce any output")
+	gzipped := flag.Bool("z", false, "unzip gz'd file on the fly")
 
 	var PrintUsage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] JSON\n", os.Args[0])
@@ -91,6 +93,13 @@ func main() {
 	}
 
 	reader := bufio.NewReader(file)
+	if *gzipped {
+		zreader, err := gzip.NewReader(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		reader = bufio.NewReader(zreader)
+	}
 
 	for {
 		line, err := reader.ReadString('\n')
