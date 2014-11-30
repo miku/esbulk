@@ -47,6 +47,10 @@ rm -rf %{_topdir}/BUILD/%{name}
 
 %changelog
 * Sun Nov 30 2014 Martin Czygan
+- 0.3.1 release
+- fix index.refresh_interval settings, make indexing 10-30% faster
+
+* Sun Nov 30 2014 Martin Czygan
 - 0.3 release
 - backwards-incompatible changes: removed -q, added -verbose
 - added support for gzipped input files
