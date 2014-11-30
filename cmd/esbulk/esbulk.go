@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -89,14 +90,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		s := scanner.Text()
-		queue <- s
-	}
+	reader := bufio.NewReader(file)
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+	for {
+		line, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		line = strings.TrimSpace(line)
+		queue <- line
 	}
 
 	close(queue)
