@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 )
@@ -19,7 +18,7 @@ type Options struct {
 	Index     string
 	DocType   string
 	BatchSize int
-	Quiet     bool
+	Verbose   bool
 }
 
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch
@@ -58,8 +57,8 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			if !options.Quiet {
-				fmt.Fprintf(os.Stderr, "[%s] @%d\n", id, counter)
+			if options.Verbose {
+				log.Printf("[%s] @%d\n", id, counter)
 			}
 			docs = docs[:0]
 		}
@@ -68,7 +67,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if !options.Quiet {
-		fmt.Fprintf(os.Stderr, "[%s] @%d\n", id, counter)
+	if options.Verbose {
+		log.Printf("[%s] @%d\n", id, counter)
 	}
 }

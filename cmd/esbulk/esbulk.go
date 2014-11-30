@@ -28,7 +28,7 @@ func main() {
 	port := flag.Int("port", 9200, "elasticsearch port")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
 	numWorkers := flag.Int("w", runtime.NumCPU(), "number of workers to use")
-	quiet := flag.Bool("q", false, "do not produce any output")
+	verbose := flag.Bool("verbose", false, "output basic progress")
 	gzipped := flag.Bool("z", false, "unzip gz'd file on the fly")
 
 	var PrintUsage = func() {
@@ -75,7 +75,7 @@ func main() {
 		Index:     *indexName,
 		DocType:   *docType,
 		BatchSize: *batchSize,
-		Quiet:     *quiet,
+		Verbose:   *verbose,
 	}
 
 	queue := make(chan string)
