@@ -96,15 +96,15 @@ func main() {
 			log.Fatal(err)
 		}
 		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
 		log.Printf("setting index.refresh_interval to 1s: %s\n", resp.Status)
-		if err != nil {
-			log.Fatal(err)
-		}
 		resp, err = http.Post(fmt.Sprintf("http://%s:%d/%s/_flush", *host, *port, *indexName), "", nil)
-		log.Printf("index flush: %s\n", resp.Status)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("index flush: %s\n", resp.Status)
 	}()
 
 	// create index if not exists
@@ -113,10 +113,10 @@ func main() {
 		log.Fatal(err)
 	}
 	resp, err := client.Do(req)
-	log.Printf("creating index: %s\n", resp.Status)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("creating index: %s\n", resp.Status)
 
 	// set refresh inteval to -1
 	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
