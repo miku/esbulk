@@ -43,3 +43,7 @@ To tweak the indexing process, adjust the `-size` and `-w` parameters.
 You can index from gzipped files as well, using the `-z` flag:
 
     $ esbulk -z -index example file.ldj.gz
+
+----
+
+A similar project has been started for solr, called [solrbulk](https://github.com/miku/solrbulk).
