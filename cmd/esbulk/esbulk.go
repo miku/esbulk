@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -89,6 +90,8 @@ func main() {
 
 	client := &http.Client{}
 
+	// shutdown procedure
+	// TODO(miku): maybe handle signals, too
 	defer func() {
 		r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
 		req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
@@ -108,7 +111,7 @@ func main() {
 	}()
 
 	// create index if not exists
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/", *host, *port, *indexName), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/%s/_status", *host, *port, *indexName), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -116,18 +119,40 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("creating index: %s\n", resp.Status)
+	if resp.StatusCode == 404 {
+		log.Printf("creating index: %s\n", resp.Status)
+		req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/", *host, *port, *indexName), nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp, err = client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == 400 {
+			msg, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Fatal(string(msg))
+		}
+	}
 
-	// set refresh inteval to -1
+	// set refresh interval to -1
+	log.Printf("setting index.refresh_interval to -1: %s\n", resp.Status)
 	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
 	req, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	resp, err = client.Do(req)
-	log.Printf("setting index.refresh_interval to -1: %s\n", resp.Status)
 	if err != nil {
 		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		log.Fatal(resp)
 	}
 
 	reader := bufio.NewReader(file)
