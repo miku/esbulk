@@ -46,7 +46,7 @@ rm -rf %{_topdir}/BUILD/%{name}
 
 
 %changelog
-* Thu May 7 2014 Martin Czygan
+* Thu May 7 2015 Martin Czygan
 - 0.3.3 release
 - improve error handling (missing index, wrong index name, ...)
 
