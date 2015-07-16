@@ -29,3 +29,4 @@ fixtures/*
 /debian/*deb
 /debian/esbulk/usr/
 esbulk-*rpm
+esbulk_*deb
