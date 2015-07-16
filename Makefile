@@ -22,7 +22,8 @@ clean:
 	rm -f coverage.out
 	rm -f $(TARGETS)
 	rm -f esbulk-*.x86_64.rpm
-	rm -f debian/esbulk*.deb
+	rm -f debian/esbulk_*.deb
+	rm -f esbulk_*.deb
 	rm -rf debian/esbulk/usr
 
 cover:
