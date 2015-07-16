@@ -1,7 +1,7 @@
 esbulk
 ======
 
-Fast parallel bulk loading utility for elasticsearch. [Asciicast](https://asciinema.org/a/14366).
+Fast parallel bulk loading utility for elasticsearch. [Asciicast](https://asciinema.org/a/5id2uazhw5faykujavgzns3mo).
 
 Installation
 ------------
