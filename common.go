@@ -40,7 +40,9 @@ func BulkIndex(docs []string, options Options) error {
 	}
 	// > Caller should close resp.Body when done reading from it.
 	// Results in a resource leak otherwise.
-	response.Body.Close()
+	if err := response.Body.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 
