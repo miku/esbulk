@@ -22,9 +22,9 @@ clean:
 	rm -f coverage.out
 	rm -f $(TARGETS)
 	rm -f esbulk-*.x86_64.rpm
-	rm -f debian/esbulk_*.deb
+	rm -f packaging/debian/esbulk_*.deb
 	rm -f esbulk_*.deb
-	rm -rf debian/esbulk/usr
+	rm -rf packaging/debian/esbulk/usr
 
 cover:
 	go get -d && go test -v	-coverprofile=coverage.out
@@ -36,19 +36,14 @@ esbulk:
 # ==== packaging
 
 deb: $(TARGETS)
-	mkdir -p debian/esbulk/usr/sbin
-	cp $(TARGETS) debian/esbulk/usr/sbin
-	cd debian && fakeroot dpkg-deb --build esbulk .
-
-REPOPATH = /usr/share/nginx/html/repo/CentOS/6/x86_64
-
-publish: rpm
-	cp esbulk-*.rpm $(REPOPATH)
-	createrepo $(REPOPATH)
+	mkdir -p packaging/debian/esbulk/usr/sbin
+	cp $(TARGETS) packaging/debian/esbulk/usr/sbin
+	cd packaging/debian && fakeroot dpkg-deb --build esbulk .
+	mv packaging/debian/esbulk*deb .
 
 rpm: $(TARGETS)
 	mkdir -p $(HOME)/rpmbuild/{BUILD,SOURCES,SPECS,RPMS}
-	cp ./packaging/esbulk.spec $(HOME)/rpmbuild/SPECS
+	cp ./packaging/rpm/esbulk.spec $(HOME)/rpmbuild/SPECS
 	cp $(TARGETS) $(HOME)/rpmbuild/BUILD
-	./packaging/buildrpm.sh esbulk
+	./packaging/rpm/buildrpm.sh esbulk
 	cp $(HOME)/rpmbuild/RPMS/x86_64/esbulk*.rpm .
