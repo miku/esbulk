@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -32,6 +31,8 @@ func main() {
 	numWorkers := flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose := flag.Bool("verbose", false, "output basic progress")
 	gzipped := flag.Bool("z", false, "unzip gz'd file on the fly")
+	mapping := flag.String("mapping", "", "mapping string or filename to apply before indexing")
+	purge := flag.Bool("purge", false, "purge any existing index before indexing")
 
 	var PrintUsage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] JSON\n", os.Args[0])
@@ -80,6 +81,36 @@ func main() {
 		Verbose:   *verbose,
 	}
 
+	if *purge {
+		err := esbulk.DeleteIndex(options)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// create index if not exists
+	err = esbulk.CreateIndex(options)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if *mapping != "" {
+		var reader io.Reader
+		if _, err := os.Stat(*mapping); os.IsNotExist(err) {
+			reader = strings.NewReader(*mapping)
+		} else {
+			file, err := os.Open(*mapping)
+			if err != nil {
+				log.Fatal(err)
+			}
+			reader = bufio.NewReader(file)
+		}
+		err := esbulk.PutMapping(options, reader)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	queue := make(chan string)
 	var wg sync.WaitGroup
 
@@ -102,16 +133,21 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("setting index.refresh_interval to 1s: %s\n", resp.Status)
+		if options.Verbose {
+			log.Printf("set index.refresh_interval to 1s: %s\n", resp.Status)
+		}
 		resp, err = http.Post(fmt.Sprintf("http://%s:%d/%s/_flush", *host, *port, *indexName), "", nil)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("index flush: %s\n", resp.Status)
+		if options.Verbose {
+			log.Printf("index flushed: %s\n", resp.Status)
+		}
+
 	}()
 
-	// create index if not exists
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/%s/_status", *host, *port, *indexName), nil)
+	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,40 +155,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if resp.StatusCode == 404 {
-		log.Printf("creating index: %s\n", resp.Status)
-		req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/", *host, *port, *indexName), nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		resp, err = client.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == 400 {
-			msg, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Fatal(string(msg))
-		}
-	}
-
-	// set refresh interval to -1
-	log.Printf("setting index.refresh_interval to -1: %s\n", resp.Status)
-	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
-	req, err = http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	resp, err = client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		log.Fatal(resp)
+	}
+	if options.Verbose {
+		log.Printf("set index.refresh_interval to -1: %s\n", resp.Status)
 	}
 
 	reader := bufio.NewReader(file)
