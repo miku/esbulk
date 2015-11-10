@@ -26,7 +26,7 @@ coverage.out
 fixtures/*
 
 /esbulk
-/debian/*deb
-/debian/esbulk/usr/
+packaging/debian/*deb
+packaging/debian/esbulk/usr/
 esbulk-*rpm
 esbulk_*deb
