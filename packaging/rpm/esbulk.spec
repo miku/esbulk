@@ -1,6 +1,6 @@
 Summary:    Fast parallel bulk loading utility for elasticsearch.
 Name:       esbulk
-Version:    0.3.6
+Version:    0.3.7
 Release:    0
 License:    MIT
 BuildArch:  x86_64
