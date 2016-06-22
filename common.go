@@ -1,6 +1,7 @@
 package esbulk
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,12 +12,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Application Version
 const Version = "0.3.7"
 
-var ErrCannotServerAddr = errors.New("cannot parse server address")
+var (
+	ErrCannotServerAddr = errors.New("cannot parse server address")
+	ErrDateFieldString  = errors.New("date-field value must be a string")
+)
 
 // Options represents bulk indexing options
 type Options struct {
@@ -28,6 +33,80 @@ type Options struct {
 	Verbose   bool
 	// http or https
 	Scheme string
+
+	// date field
+	DateField string
+	// pattern for parsing DateField into a time.Time
+	DateFieldLayout string
+
+	mu sync.Mutex
+	// keep track of all dynamic indices encountered for flushing
+	DynamicIndexes map[string]bool
+}
+
+var CurlyCleaner = strings.NewReplacer("{", "", "}", "")
+
+// IndexName returns the index name for a given
+// line (document). By default, just use `Index`,
+// if `IndexDateLayout` is set, then parse the
+// document for a (top level) `DateField` which
+// must be in `DateFieldLayout` and derive index
+// name from it.
+func (o *Options) IndexName(s string) (string, error) {
+	if !strings.Contains(o.Index, "{") {
+		// easy case
+		return o.Index, nil
+	}
+
+	// index name contains a '{', we take this as
+	// a hint, that we should use a date layout
+	doc := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(s), &doc); err != nil {
+		return "", err
+	}
+
+	// ensure the field value is a string
+	v, ok := doc[o.DateField].(string)
+	if !ok {
+		return "", ErrDateFieldString
+	}
+
+	// try to parse the value into a time.Time
+	t, err := time.Parse(o.DateFieldLayout, v)
+	if err != nil {
+		return "", err
+	}
+
+	dynamicIndexName := t.Format(CurlyCleaner.Replace(o.Index))
+
+	log.Printf(`name: "%s"`, dynamicIndexName)
+
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.DynamicIndexes[dynamicIndexName] = true
+	// format according to index name, but clean
+	// the curly braces
+
+	for k, v := range o.DynamicIndexes {
+		log.Println("DynamicIndexes", k, v)
+	}
+
+	return dynamicIndexName, nil
+}
+
+// Indexes returns all indexes encountered in this run.
+func (o *Options) Indexes() []string {
+	if !strings.Contains(o.Index, "{") {
+		// easy case
+		return []string{o.Index}
+	}
+	var indices []string
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	for k := range o.DynamicIndexes {
+		indices = append(indices, k)
+	}
+	return indices
 }
 
 func (o *Options) SetServer(s string) error {
@@ -62,12 +141,18 @@ func (o *Options) SetServer(s string) error {
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch
 func BulkIndex(docs []string, options Options) error {
 	link := fmt.Sprintf("%s://%s:%d/%s/%s/_bulk", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
-	header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
 		if len(strings.TrimSpace(doc)) == 0 {
 			continue
 		}
+		// this operation adds a slight overhead here,
+		// TODO(miku): if too slow, factor this out
+		indexName, err := options.IndexName(doc)
+		if err != nil {
+			return err
+		}
+		header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, indexName, options.DocType)
 		lines = append(lines, header)
 		lines = append(lines, doc)
 	}

@@ -35,6 +35,10 @@ func main() {
 	mapping := flag.String("mapping", "", "mapping string or filename to apply before indexing")
 	purge := flag.Bool("purge", false, "purge any existing index before indexing")
 
+	// dynamic index selection
+	dateField := flag.String("date-field", "", "a field with a date")
+	dateFieldLayout := flag.String("date-field-layout", "2006-01-02T15:04:05.000Z", "date pattern (golang syle: https://golang.org/pkg/time/#pkg-constants)")
+
 	var PrintUsage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] JSON\n", os.Args[0])
 		flag.PrintDefaults()
@@ -65,6 +69,10 @@ func main() {
 		log.Fatal("index name required")
 	}
 
+	if strings.Contains(*indexName, "{") && *dateField == "" {
+		log.Fatal("dynamic index name detected, but -date-field not set")
+	}
+
 	file, err := os.Open(flag.Args()[0])
 	if err != nil {
 		log.Fatalln(err)
@@ -81,6 +89,11 @@ func main() {
 		BatchSize: *batchSize,
 		Verbose:   *verbose,
 		Scheme:    "http",
+
+		// dynamic date support
+		DateField:       *dateField,
+		DateFieldLayout: *dateFieldLayout,
+		DynamicIndexes:  make(map[string]bool),
 	}
 
 	// backwards-compat for -host and -port, only
@@ -136,9 +149,35 @@ func main() {
 	// shutdown procedure
 	// TODO(miku): maybe handle signals, too
 	defer func() {
-		r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
+		for _, idx := range options.Indexes() {
+			r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
+			req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
+				options.Scheme, options.Host, options.Port, idx), r)
+			if err != nil {
+				log.Fatal(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if options.Verbose {
+				log.Printf("[%s] set index.refresh_interval to 1s: %s\n", idx, resp.Status)
+			}
+			resp, err = http.Post(fmt.Sprintf("%s://%s:%d/%s/_flush",
+				options.Scheme, options.Host, options.Port, idx), "", nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if options.Verbose {
+				log.Printf("[%s] index flushed: %s\n", idx, resp.Status)
+			}
+		}
+	}()
+
+	for _, idx := range options.Indexes() {
+		r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
 		req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
-			options.Scheme, options.Host, options.Port, options.Index), r)
+			options.Scheme, options.Host, options.Port, idx), r)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -146,36 +185,13 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if options.Verbose {
-			log.Printf("set index.refresh_interval to 1s: %s\n", resp.Status)
-		}
-		resp, err = http.Post(fmt.Sprintf("%s://%s:%d/%s/_flush",
-			options.Scheme, options.Host, options.Port, options.Index), "", nil)
-		if err != nil {
-			log.Fatal(err)
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			log.Fatal(resp)
 		}
 		if options.Verbose {
-			log.Printf("index flushed: %s\n", resp.Status)
+			log.Printf("set index.refresh_interval to -1: %s\n", resp.Status)
 		}
-
-	}()
-
-	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
-		options.Scheme, options.Host, options.Port, options.Index), r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		log.Fatal(resp)
-	}
-	if options.Verbose {
-		log.Printf("set index.refresh_interval to -1: %s\n", resp.Status)
 	}
 
 	reader := bufio.NewReader(file)
