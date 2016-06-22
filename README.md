@@ -62,7 +62,7 @@ the `-z` flag:
 
     $ esbulk -z -index example file.ldj.gz
 
-Starting with 0.3.6 the preferred method to set a
+Starting with 0.3.7 the preferred method to set a
 non-default server hostport is via `-server`, e.g.
 
     $ esbulk -server https://0.0.0.0:9201
