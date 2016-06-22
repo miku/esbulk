@@ -83,6 +83,7 @@ func (o *Options) IndexName(s string) (string, error) {
 
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
 	o.DynamicIndexes[dynamicIndexName] = true
 	// format according to index name, but clean
 	// the curly braces
@@ -101,8 +102,10 @@ func (o *Options) Indexes() []string {
 		return []string{o.Index}
 	}
 	var indices []string
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
 	for k := range o.DynamicIndexes {
 		indices = append(indices, k)
 	}
