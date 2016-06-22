@@ -83,9 +83,14 @@ func main() {
 		Scheme:    "http",
 	}
 
-	// override -host and -port settings with -server
-	if err := options.SetServer(*server); err != nil {
-		log.Fatal(err)
+	// backwards-compat for -host and -port, only
+	// use -server if -host and -port are on
+	// defaults
+	if *host == "localhost" && *port == 9200 {
+		// override -host and -port settings with -server
+		if err := options.SetServer(*server); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if *purge {
