@@ -1,6 +1,7 @@
 package esbulk
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,13 +39,23 @@ type Options struct {
 	DateField string
 	// pattern for parsing DateField into a time.Time
 	DateFieldLayout string
-
-	mu sync.Mutex
-	// keep track of all dynamic indices encountered for flushing
-	DynamicIndexes map[string]bool
 }
 
 var CurlyCleaner = strings.NewReplacer("{", "", "}", "")
+
+func (o *Options) SniffIndexName(r io.Reader) (string, error) {
+	reader := bufio.NewReader(r)
+	line, err := reader.ReadString('\n')
+	if err == io.EOF {
+		return "", fmt.Errorf("no data")
+	}
+	if err != nil {
+		return "", err
+	}
+	line = strings.TrimSpace(line)
+	return o.IndexName(line)
+
+}
 
 // IndexName returns the index name for a given
 // line (document). By default, just use `Index`,
@@ -77,39 +88,7 @@ func (o *Options) IndexName(s string) (string, error) {
 		return "", err
 	}
 
-	dynamicIndexName := t.Format(CurlyCleaner.Replace(o.Index))
-
-	log.Printf(`name: "%s"`, dynamicIndexName)
-
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	o.DynamicIndexes[dynamicIndexName] = true
-	// format according to index name, but clean
-	// the curly braces
-
-	for k, v := range o.DynamicIndexes {
-		log.Println("DynamicIndexes", k, v)
-	}
-
-	return dynamicIndexName, nil
-}
-
-// Indexes returns all indexes encountered in this run.
-func (o *Options) Indexes() []string {
-	if !strings.Contains(o.Index, "{") {
-		// easy case
-		return []string{o.Index}
-	}
-	var indices []string
-
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	for k := range o.DynamicIndexes {
-		indices = append(indices, k)
-	}
-	return indices
+	return t.Format(CurlyCleaner.Replace(o.Index)), nil
 }
 
 func (o *Options) SetServer(s string) error {
@@ -204,6 +183,7 @@ func PutMapping(options Options, body io.Reader) error {
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+
 		return err
 	}
 	if options.Verbose {

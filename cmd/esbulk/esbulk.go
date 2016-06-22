@@ -93,7 +93,6 @@ func main() {
 		// dynamic date support
 		DateField:       *dateField,
 		DateFieldLayout: *dateFieldLayout,
-		DynamicIndexes:  make(map[string]bool),
 	}
 
 	// backwards-compat for -host and -port, only
@@ -106,19 +105,44 @@ func main() {
 		}
 	}
 
-	if *purge {
-		if !strings.Contains(*indexName, "{") {
-			err := esbulk.DeleteIndex(options)
-			if err != nil {
-				log.Fatal(err)
-			}
+	if *purge && !strings.Contains(*indexName, "{") {
+		err := esbulk.DeleteIndex(options)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
 	// create index if not exists
-	if !strings.Contains(*indexName, "{") {
-		err = esbulk.CreateIndex(options)
+	if strings.Contains(*indexName, "{") {
+
+		ff, err := os.Open(flag.Args()[0])
 		if err != nil {
+			log.Fatalln(err)
+		}
+
+		name, err := options.SniffIndexName(ff)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ff.Close()
+		fakeOpts := esbulk.Options{
+			Host:      *host,
+			Port:      *port,
+			Index:     name,
+			DocType:   *docType,
+			BatchSize: *batchSize,
+			Verbose:   *verbose,
+			Scheme:    "http",
+
+			// dynamic date support
+			DateField:       *dateField,
+			DateFieldLayout: *dateFieldLayout,
+		}
+		if err := esbulk.CreateIndex(fakeOpts); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		if err := esbulk.CreateIndex(options); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -153,35 +177,9 @@ func main() {
 	// shutdown procedure
 	// TODO(miku): maybe handle signals, too
 	defer func() {
-		for _, idx := range options.Indexes() {
-			r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
-			req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
-				options.Scheme, options.Host, options.Port, idx), r)
-			if err != nil {
-				log.Fatal(err)
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if options.Verbose {
-				log.Printf("[%s] set index.refresh_interval to 1s: %s\n", idx, resp.Status)
-			}
-			resp, err = http.Post(fmt.Sprintf("%s://%s:%d/%s/_flush",
-				options.Scheme, options.Host, options.Port, idx), "", nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if options.Verbose {
-				log.Printf("[%s] index flushed: %s\n", idx, resp.Status)
-			}
-		}
-	}()
-
-	for _, idx := range options.Indexes() {
-		r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
-		req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
-			options.Scheme, options.Host, options.Port, idx), r)
+		r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
+		req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/_settings",
+			options.Scheme, options.Host, options.Port), r)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -189,13 +187,43 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			log.Fatal(resp)
+		if options.Verbose {
+			log.Printf("set index.refresh_interval to 1s: %s\n", resp.Status)
+		}
+		resp, err = http.Post(fmt.Sprintf("%s://%s:%d/_flush",
+			options.Scheme, options.Host, options.Port), "", nil)
+		if err != nil {
+			log.Fatal(err)
 		}
 		if options.Verbose {
-			log.Printf("set index.refresh_interval to -1: %s\n", resp.Status)
+			log.Printf("index flushed: %s\n", resp.Status)
 		}
+	}()
+
+	// this may fail, if there are no indices already
+	// https://discuss.elastic.co/t/new-clusters-not-accessible/43813
+	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/_settings",
+		options.Scheme, options.Host, options.Port), r)
+
+	log.Println(req.URL)
+	if err != nil {
+
+		log.Fatal(err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		log.Fatal(resp)
+	}
+	if options.Verbose {
+		log.Printf("set index.refresh_interval to -1: %s\n", resp.Status)
 	}
 
 	reader := bufio.NewReader(file)
