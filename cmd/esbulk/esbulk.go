@@ -25,6 +25,7 @@ func main() {
 	memprofile := flag.String("memprofile", "", "write heap profile to file")
 	indexName := flag.String("index", "", "index name")
 	docType := flag.String("type", "default", "elasticsearch doc type")
+	server := flag.String("server", "http://localhost:9200", "elasticsearch server, this works with https as well")
 	host := flag.String("host", "localhost", "elasticsearch host")
 	port := flag.Int("port", 9200, "elasticsearch port")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
@@ -79,6 +80,12 @@ func main() {
 		DocType:   *docType,
 		BatchSize: *batchSize,
 		Verbose:   *verbose,
+		Scheme:    "http",
+	}
+
+	// override -host and -port settings with -server
+	if err := options.SetServer(*server); err != nil {
+		log.Fatal(err)
 	}
 
 	if *purge {
@@ -125,7 +132,8 @@ func main() {
 	// TODO(miku): maybe handle signals, too
 	defer func() {
 		r := strings.NewReader(`{"index": {"refresh_interval": "1s"}}`)
-		req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
+		req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
+			options.Scheme, options.Host, options.Port, options.Index), r)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -136,7 +144,8 @@ func main() {
 		if options.Verbose {
 			log.Printf("set index.refresh_interval to 1s: %s\n", resp.Status)
 		}
-		resp, err = http.Post(fmt.Sprintf("http://%s:%d/%s/_flush", *host, *port, *indexName), "", nil)
+		resp, err = http.Post(fmt.Sprintf("%s://%s:%d/%s/_flush",
+			options.Scheme, options.Host, options.Port, options.Index), "", nil)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -147,7 +156,8 @@ func main() {
 	}()
 
 	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:%d/%s/_settings", *host, *port, *indexName), r)
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
+		options.Scheme, options.Host, options.Port, options.Index), r)
 	if err != nil {
 		log.Fatal(err)
 	}

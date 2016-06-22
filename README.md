@@ -15,19 +15,35 @@ Usage
 
     $ esbulk -h
     Usage: esbulk [OPTIONS] JSON
-      -cpuprofile="": write cpu profile to file
-      -host="localhost": elasticsearch host
-      -index="": index name
-      -memprofile="": write heap profile to file
-      -port=9200: elasticsearch port
-      -size=1000: bulk batch size
-      -type="default": elasticsearch doc type
-      -v=false: prints current program version
-      -verbose=false: output basic progress
-      -w=4: number of workers to use
-      -z=false: unzip gz'd file on the fly
+      -cpuprofile string
+          write cpu profile to file
+      -host string
+          elasticsearch host (default "localhost")
+      -index string
+          index name
+      -mapping string
+          mapping string or filename to apply before indexing
+      -memprofile string
+          write heap profile to file
+      -port int
+          elasticsearch port (default 9200)
+      -purge
+          purge any existing index before indexing
+      -server string
+          elasticsearch server, this works with https as well (default "http://localhost:9200")
+      -size int
+          bulk batch size (default 1000)
+      -type string
+          elasticsearch doc type (default "default")
+      -v  prints current program version
+      -verbose
+          output basic progress
+      -w int
+          number of workers to use (default 4)
+      -z  unzip gz'd file on the fly
 
-To index a JSON file, that contains one document per line, just run:
+To index a JSON file, that contains one document
+per line, just run:
 
     $ esbulk -index example file.ldj
 
@@ -37,12 +53,23 @@ Where `file.ldj` is line delimited JSON, like:
     {"name": "estab", "version": "0.1.3"}
     ...
 
-By default `esbulk` will use as many parallel workers, as there are cores.
-To tweak the indexing process, adjust the `-size` and `-w` parameters.
+By default `esbulk` will use as many parallel
+workers, as there are cores. To tweak the indexing
+process, adjust the `-size` and `-w` parameters.
 
-You can index from gzipped files as well, using the `-z` flag:
+You can index from gzipped files as well, using
+the `-z` flag:
 
     $ esbulk -z -index example file.ldj.gz
+
+Starting with 0.3.6 the preferred method to set a
+non-default server hostport is via `-server`, e.g.
+
+    $ esbulk -server https://0.0.0.0:9201
+
+This way, you can use https as well, which was not
+possible before. Options `-host` and `-port` are
+kept for backwards compatibility.
 
 ----
 
