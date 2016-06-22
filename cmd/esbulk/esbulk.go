@@ -107,16 +107,20 @@ func main() {
 	}
 
 	if *purge {
-		err := esbulk.DeleteIndex(options)
-		if err != nil {
-			log.Fatal(err)
+		if !strings.Contains(*indexName, "{") {
+			err := esbulk.DeleteIndex(options)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 
 	// create index if not exists
-	err = esbulk.CreateIndex(options)
-	if err != nil {
-		log.Fatal(err)
+	if !strings.Contains(*indexName, "{") {
+		err = esbulk.CreateIndex(options)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if *mapping != "" {
