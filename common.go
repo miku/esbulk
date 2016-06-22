@@ -88,7 +88,7 @@ func (o *Options) IndexName(s string) (string, error) {
 		return "", err
 	}
 
-	return t.Format(CurlyCleaner.Replace(o.Index)), nil
+	return t.UTC().Format(CurlyCleaner.Replace(o.Index)), nil
 }
 
 func (o *Options) SetServer(s string) error {
