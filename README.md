@@ -10,6 +10,8 @@ Installation
 
 For `deb` or `rpm` packages, see: https://github.com/miku/esbulk/releases
 
+![](https://raw.githubusercontent.com/miku/esbulk/master/docs/asciicast.gif)
+
 Usage
 -----
 
