@@ -10,8 +10,6 @@ Installation
 
 For `deb` or `rpm` packages, see: https://github.com/miku/esbulk/releases
 
-![](https://raw.githubusercontent.com/miku/esbulk/master/docs/asciicast.gif)
-
 Usage
 -----
 
@@ -43,6 +41,8 @@ Usage
       -w int
           number of workers to use (default 4)
       -z  unzip gz'd file on the fly
+
+![](https://raw.githubusercontent.com/miku/esbulk/master/docs/asciicast.gif)
 
 To index a JSON file, that contains one document
 per line, just run:
