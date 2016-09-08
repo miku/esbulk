@@ -17,7 +17,7 @@ import (
 // Application Version
 const Version = "0.3.7"
 
-var ErrCannotServerAddr = errors.New("cannot parse server address")
+var ErrParseCannotServerAddr = errors.New("cannot parse server address")
 
 // Options represents bulk indexing options
 type Options struct {
@@ -56,7 +56,7 @@ func (o *Options) SetServer(s string) error {
 		}
 		o.Port = port
 	default:
-		return ErrCannotServerAddr
+		return ErrParseCannotServerAddr
 	}
 	return nil
 }
