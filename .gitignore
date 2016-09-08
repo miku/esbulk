@@ -30,3 +30,6 @@ packaging/debian/*deb
 packaging/debian/esbulk/usr/
 esbulk-*rpm
 esbulk_*deb
+
+.vagrant/*
+Vagrantfile
