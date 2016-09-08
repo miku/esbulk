@@ -63,6 +63,9 @@ func (o *Options) SetServer(s string) error {
 
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch
 func BulkIndex(docs []string, options Options) error {
+	if len(docs) == 0 {
+		return nil
+	}
 	link := fmt.Sprintf("%s://%s:%d/%s/%s/_bulk", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
