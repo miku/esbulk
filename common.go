@@ -109,6 +109,9 @@ func BulkIndex(docs []string, options Options) error {
 	if err != nil {
 		return err
 	}
+	if response.StatusCode >= 400 {
+		return fmt.Errorf("indexing failed with %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+	}
 	return response.Body.Close()
 }
 
