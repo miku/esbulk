@@ -1,6 +1,7 @@
 package esbulk
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ type Options struct {
 	DocType   string
 	BatchSize int
 	Verbose   bool
+	IDField   string
 	// http or https
 	Scheme string
 }
@@ -62,11 +64,39 @@ func (o *Options) SetServer(s string) error {
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch
 func BulkIndex(docs []string, options Options) error {
 	link := fmt.Sprintf("%s://%s:%d/%s/%s/_bulk", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
-	header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
 		if len(strings.TrimSpace(doc)) == 0 {
 			continue
+		}
+
+		header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
+
+		// If an "-id" is given, peek into the document to extract the ID and
+		// use it in the header.
+		if options.IDField != "" {
+			var docmap map[string]string
+			if err := json.Unmarshal([]byte(doc), &docmap); err != nil {
+				return err
+			}
+			id, ok := docmap[options.IDField]
+			if !ok {
+				return fmt.Errorf("document has no ID field (%s): %s", options.IDField, doc)
+			}
+			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": "%s"}}`,
+				options.Index, options.DocType, id)
+
+			// Remove the IDField if it is accidentally named '_id', since
+			// Field [_id] is a metadata field and cannot be added inside a
+			// document.
+			if options.IDField == "_id" {
+				delete(docmap, "_id")
+				b, err := json.Marshal(docmap)
+				if err != nil {
+					return err
+				}
+				doc = string(b)
+			}
 		}
 		lines = append(lines, header)
 		lines = append(lines, doc)
