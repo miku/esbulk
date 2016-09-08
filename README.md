@@ -75,12 +75,17 @@ This way, you can use https as well, which was not
 possible before. Options `-host` and `-port` are
 kept for backwards compatibility.
 
+Reusing IDs
+-----------
+
 Since version 0.3.8: If you want to reuse IDs from your documents in elasticsearch, you
 can specify the ID field via `-id` flag:
 
     $ cat file.json
     {"x": "doc-1", "db": "mysql"}
     {"x": "doc-2", "db": "mongo"}
+
+Here, we would like to reuse the ID from field *x*.
 
     $ esbulk -id x -index throwaway -verbose file.json
     ...
