@@ -78,16 +78,34 @@ func BulkIndex(docs []string, options Options) error {
 		// If an "-id" is given, peek into the document to extract the ID and
 		// use it in the header.
 		if options.IDField != "" {
-			var docmap map[string]string
-			if err := json.Unmarshal([]byte(doc), &docmap); err != nil {
+			var docmap map[string]interface{}
+			dec := json.NewDecoder(strings.NewReader(doc))
+			dec.UseNumber()
+			if err := dec.Decode(&docmap); err != nil {
 				return err
 			}
+
+			// Find ID in the document.
 			id, ok := docmap[options.IDField]
 			if !ok {
 				return fmt.Errorf("document has no ID field (%s): %s", options.IDField, doc)
 			}
+
+			// ID can be any type at this point, try to find a string reprentation or bail out.
+			var idstr string
+			switch t := id.(type) {
+			case string:
+				idstr = t
+			case fmt.Stringer:
+				idstr = t.String()
+			case json.Number:
+				idstr = t.String()
+			default:
+				return fmt.Errorf("cannot convert %T id value to string: %v", id, id)
+			}
+
 			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": "%s"}}`,
-				options.Index, options.DocType, id)
+				options.Index, options.DocType, idstr)
 
 			// Remove the IDField if it is accidentally named '_id', since
 			// Field [_id] is a metadata field and cannot be added inside a
