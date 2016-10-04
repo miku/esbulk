@@ -33,3 +33,5 @@ esbulk_*deb
 
 .vagrant/*
 Vagrantfile
+TODO.md
+/tmp
