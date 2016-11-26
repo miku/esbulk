@@ -15,7 +15,7 @@ import (
 )
 
 // Application Version
-const Version = "0.3.9"
+const Version = "0.4.0"
 
 var ErrParseCannotServerAddr = errors.New("cannot parse server address")
 
