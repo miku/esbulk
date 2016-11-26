@@ -32,16 +32,17 @@ type Options struct {
 	Scheme string
 }
 
+// SetServer parses out host and port for a string and sets the option values.
 func (o *Options) SetServer(s string) error {
-	u, err := url.Parse(s)
+	locator, err := url.Parse(s)
 	if err != nil {
 		return err
 	}
-	o.Scheme = u.Scheme
-	parts := strings.Split(u.Host, ":")
+	o.Scheme = locator.Scheme
+	parts := strings.Split(locator.Host, ":")
 	switch len(parts) {
 	case 1:
-		log.Println(s, u.Host, parts)
+		log.Println(s, locator.Host, parts)
 		// assume port, like https://:9200
 		port, err := strconv.Atoi(parts[0])
 		if err != nil {
@@ -91,7 +92,7 @@ func BulkIndex(docs []string, options Options) error {
 				return fmt.Errorf("document has no ID field (%s): %s", options.IDField, doc)
 			}
 
-			// ID can be any type at this point, try to find a string reprentation or bail out.
+			// ID can be any type at this point, try to find a string representation or bail out.
 			var idstr string
 			switch t := id.(type) {
 			case string:
@@ -133,7 +134,7 @@ func BulkIndex(docs []string, options Options) error {
 	return response.Body.Close()
 }
 
-// Worker will batch index documents that come in on the lines channel
+// Worker will batch index documents that come in on the lines channel.
 func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var docs []string
