@@ -88,26 +88,22 @@ func main() {
 		IDField:   *idfield,
 	}
 
-	// backwards-compat for -host and -port, only
-	// use -server if -host and -port are on
-	// defaults
+	// backwards-compat for -host and -port, only use newer -server flag if
+	// older -host and -port are on defaults
 	if *host == "localhost" && *port == 9200 {
-		// override -host and -port settings with -server
 		if err := options.SetServer(*server); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	if *purge {
-		err := esbulk.DeleteIndex(options)
-		if err != nil {
+		if err := esbulk.DeleteIndex(options); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// create index if not exists
-	err = esbulk.CreateIndex(options)
-	if err != nil {
+	if err := esbulk.CreateIndex(options); err != nil {
 		log.Fatal(err)
 	}
 
@@ -162,7 +158,6 @@ func main() {
 		if options.Verbose {
 			log.Printf("index flushed: %s\n", resp.Status)
 		}
-
 	}()
 
 	r := strings.NewReader(`{"index": {"refresh_interval": "-1"}}`)
