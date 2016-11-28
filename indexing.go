@@ -15,9 +15,6 @@ import (
 	"sync"
 )
 
-// Application Version
-const Version = "0.4.1"
-
 var ErrParseCannotServerAddr = errors.New("cannot parse server address")
 
 // Options represents bulk indexing options
