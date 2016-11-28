@@ -127,6 +127,15 @@ Here, we would like to reuse the ID from field *x*.
       }
     }
 
+Using X-Pack
+------------
+
+Since 0.4.2: support for secured elasticsearch nodes:
+
+```
+$ esbulk -u elastic:changeme -index myindex file.ldj
+```
+
 ----
 
 A similar project has been started for solr, called [solrbulk](https://github.com/miku/solrbulk).
