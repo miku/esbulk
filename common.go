@@ -144,7 +144,9 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 		counter++
 		if counter%options.BatchSize == 0 {
 			msg := make([]string, len(docs))
-			copy(msg, docs)
+			if n := copy(msg, docs); n != len(docs) {
+				log.Fatalf("expected %d, but got %d", len(docs), n)
+			}
 
 			err := BulkIndex(msg, options)
 			if err != nil {
@@ -160,7 +162,9 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 		return
 	}
 	msg := make([]string, len(docs))
-	copy(msg, docs)
+	if n := copy(msg, docs); n != len(docs) {
+		log.Fatalf("expected %d, but got %d", len(docs), n)
+	}
 
 	err := BulkIndex(msg, options)
 	if err != nil {
