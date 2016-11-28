@@ -18,7 +18,7 @@ import (
 	"github.com/miku/esbulk"
 )
 
-// Application Version
+// Application Version.
 const Version = "0.4.1"
 
 func main() {

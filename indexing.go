@@ -17,7 +17,7 @@ import (
 
 var ErrParseCannotServerAddr = errors.New("cannot parse server address")
 
-// Options represents bulk indexing options
+// Options represents bulk indexing options.
 type Options struct {
 	Host      string
 	Port      int
@@ -26,8 +26,7 @@ type Options struct {
 	BatchSize int
 	Verbose   bool
 	IDField   string
-	// http or https
-	Scheme string
+	Scheme    string // http or https
 }
 
 // Item represents a bulk action.
@@ -81,7 +80,7 @@ func (o *Options) SetServer(s string) error {
 	return nil
 }
 
-// BulkIndex takes a set of documents as strings and indexes them into elasticsearch
+// BulkIndex takes a set of documents as strings and indexes them into elasticsearch.
 func BulkIndex(docs []string, options Options) error {
 	if len(docs) == 0 {
 		return nil
@@ -111,7 +110,8 @@ func BulkIndex(docs []string, options Options) error {
 				return fmt.Errorf("document has no ID field (%s): %s", options.IDField, doc)
 			}
 
-			// ID can be any type at this point, try to find a string representation or bail out.
+			// ID can be any type at this point, try to find a string
+			// representation or bail out.
 			var idstr string
 			switch t := id.(type) {
 			case string:
@@ -169,7 +169,7 @@ func BulkIndex(docs []string, options Options) error {
 		return err
 	}
 	if br.HasErrors {
-		return fmt.Errorf("error during bulk operation, try a lower -w value or increase thread_pool.bulk.queue_size in your nodes")
+		return fmt.Errorf("error during bulk operation, try less workers (lower -w value) or increase thread_pool.bulk.queue_size in your nodes")
 	}
 	return nil
 }
@@ -213,7 +213,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 	}
 }
 
-// PutMapping reads and applies a mapping from a reader.
+// PutMapping applies a mapping from a reader.
 func PutMapping(options Options, body io.Reader) error {
 	link := fmt.Sprintf("%s://%s:%d/%s/_mapping/%s", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
 	req, err := http.NewRequest("PUT", link, body)
