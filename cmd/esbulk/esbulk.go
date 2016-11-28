@@ -69,7 +69,7 @@ func main() {
 		log.Fatal("index name required")
 	}
 
-	file, err := os.Open(flag.Args()[0])
+	file, err := os.Open(flag.Arg(0))
 	if err != nil {
 		log.Fatalln(err)
 	}
