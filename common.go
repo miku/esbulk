@@ -148,8 +148,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 				log.Fatalf("expected %d, but got %d", len(docs), n)
 			}
 
-			err := BulkIndex(msg, options)
-			if err != nil {
+			if err := BulkIndex(msg, options); err != nil {
 				log.Fatal(err)
 			}
 			if options.Verbose {
@@ -166,8 +165,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 		log.Fatalf("expected %d, but got %d", len(docs), n)
 	}
 
-	err := BulkIndex(msg, options)
-	if err != nil {
+	if err := BulkIndex(msg, options); err != nil {
 		log.Fatal(err)
 	}
 	if options.Verbose {
