@@ -154,7 +154,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 			if options.Verbose {
 				log.Printf("[%s] @%d\n", id, counter)
 			}
-			docs = docs[:0]
+			docs = nil
 		}
 	}
 	if len(docs) == 0 {
