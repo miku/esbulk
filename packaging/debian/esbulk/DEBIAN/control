@@ -1,5 +1,5 @@
 Package: esbulk
-Version: 0.4.1
+Version: 0.4.2
 Section: utils
 Priority: optional
 Architecture: amd64

@@ -1,6 +1,6 @@
 Summary:    Fast parallel bulk loading utility for elasticsearch.
 Name:       esbulk
-Version:    0.4.1
+Version:    0.4.2
 Release:    0
 License:    MIT
 BuildArch:  x86_64
@@ -46,6 +46,10 @@ rm -rf %{_topdir}/BUILD/%{name}
 
 
 %changelog
+* Mon Nov 28 2016 Martin Czygan
+- 0.4.2 release
+- support for X-Pack, HTTP Basic AUTH, with curl syntax (esbulk -u username:password)
+
 * Mon Nov 28 2016 Martin Czygan
 - 0.4.1 release
 - abort indexing, if a single failed bulk request is encountered; do not silently lose documents
