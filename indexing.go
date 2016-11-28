@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -27,6 +26,8 @@ type Options struct {
 	Verbose   bool
 	IDField   string
 	Scheme    string // http or https
+	Username  string
+	Password  string
 }
 
 // Item represents a bulk action.
@@ -149,7 +150,16 @@ func BulkIndex(docs []string, options Options) error {
 	// bad requests. Finally, if we have a HTTP 200, the bulk request could
 	// still have failed: for that we need to decode the elasticsearch
 	// response.
-	response, err := http.Post(link, "application/json", strings.NewReader(body))
+	req, err := http.NewRequest("POST", link, strings.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	if options.Username != "" && options.Password != "" {
+		req.SetBasicAuth(options.Username, options.Password)
+	}
+
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -220,6 +230,9 @@ func PutMapping(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
+	if options.Username != "" && options.Password != "" {
+		req.SetBasicAuth(options.Username, options.Password)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -232,28 +245,45 @@ func PutMapping(options Options, body io.Reader) error {
 
 // CreateIndex creates a new index.
 func CreateIndex(options Options) error {
-	resp, err := http.Get(fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index))
+	link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
+	req, err := http.NewRequest("GET", link, nil)
 	if err != nil {
 		return err
 	}
+
+	if options.Username != "" && options.Password != "" {
+		req.SetBasicAuth(options.Username, options.Password)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// index already exists, return
 	if resp.StatusCode == 200 {
 		return nil
 	}
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
+
+	req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
 	if err != nil {
 		return err
+	}
+	if options.Username != "" && options.Password != "" {
+		req.SetBasicAuth(options.Username, options.Password)
 	}
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 400 {
-		msg, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
+	if resp.StatusCode >= 400 {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, resp.Body); err != nil {
 			return err
 		}
-		return errors.New(string(msg))
+		return errors.New(buf.String())
 	}
 	if options.Verbose {
 		log.Printf("created index: %s\n", resp.Status)
@@ -267,6 +297,9 @@ func DeleteIndex(options Options) error {
 	req, err := http.NewRequest("DELETE", link, nil)
 	if err != nil {
 		return err
+	}
+	if options.Username != "" && options.Password != "" {
+		req.SetBasicAuth(options.Username, options.Password)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
