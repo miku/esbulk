@@ -18,6 +18,9 @@ import (
 	"github.com/miku/esbulk"
 )
 
+// Application Version
+const Version = "0.4.1"
+
 func main() {
 
 	version := flag.Bool("v", false, "prints current program version")
@@ -53,7 +56,7 @@ func main() {
 	}
 
 	if *version {
-		fmt.Println(esbulk.Version)
+		fmt.Println(Version)
 		os.Exit(0)
 	}
 
