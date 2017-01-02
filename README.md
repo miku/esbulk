@@ -6,7 +6,7 @@ newline delimited JSON file or stdin and indexed into elasticsearch in bulk
 *and* in parallel. The shortest command would be:
 
 ```shell
-$ esbulk -index my-index-name file.ldj
+$ esbulk -index my-index-name < file.ldj
 ```
 
 Caveat: If indexing *pressure* on the bulk API is too high (dozens or hundreds of
