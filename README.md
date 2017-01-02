@@ -20,13 +20,12 @@ $ esbulk -index my-index-name -w 100 file.ldj
 ```
 
 Please note that, in such a case, some documents are indexed and some are not.
-Your index will be in an inconsistent state, since there is not transactional
+Your index will be in an inconsistent state, since there is no transactional
 bracket around the indexing process.
 
 However, using defaults (parallism: number of cores) on a single node setup
-will usually just work. For larger clusters, increase the number of workers
-until you see full CPU utilization. After that, more workers won't buy any more
-speed.
+will just work. For larger clusters, increase the number of workers until you
+see full CPU utilization. After that, more workers won't buy any more speed.
 
 Installation
 ------------
