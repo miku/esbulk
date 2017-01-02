@@ -1,7 +1,32 @@
 esbulk
 ======
 
-Fast parallel bulk loading utility for elasticsearch.
+Fast parallel bulk loading utility for elasticsearch. Data is read from a
+newline delimited JSON file or stdin and indexed into elasticsearch in bulk
+*and* in parallel. The shortest command would be:
+
+```shell
+$ esbulk -index my-index-name file.ldj
+```
+
+Caveat: If indexing *pressure* on the bulk API is too high (dozens or hundreds of
+parallel workers, large batch sizes, depending on you setup), esbulk will halt
+and report an error:
+
+```shell
+$ esbulk -index my-index-name -w 100 file.ldj
+2017/01/02 16:25:25 error during bulk operation, try less workers (lower -w value) or
+                    increase thread_pool.bulk.queue_size in your nodes
+```
+
+Please note that, in such a case, some documents are indexed and some are not.
+Your index will be in an inconsistant state, since there is not transactional
+bracket around the indexing process.
+
+However, using defaults (parallism: number of cores) on a single node setup
+will usually just work. For larger clusters, increase the number of workers
+until you see full CPU utilization. After that, more workers won't buy any more
+speed.
 
 Installation
 ------------
