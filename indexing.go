@@ -32,7 +32,7 @@ type Options struct {
 
 // Item represents a bulk action.
 type Item struct {
-	IndexAction struct {
+	Create struct {
 		Index  string `json:"_index"`
 		Type   string `json:"_type"`
 		ID     string `json:"_id"`
@@ -41,7 +41,7 @@ type Item struct {
 			Type   string `json:"type"`
 			Reason string `json:"reason"`
 		} `json:"error"`
-	}
+	} `json:"create"`
 }
 
 // BulkResponse is a response to a bulk request.
@@ -179,7 +179,12 @@ func BulkIndex(docs []string, options Options) error {
 		return err
 	}
 	if br.HasErrors {
-		return fmt.Errorf("error during bulk operation, try less workers (lower -w value) or increase thread_pool.bulk.queue_size in your nodes")
+		// Gather Error reasons
+		var errors []string
+		for _, item := range br.Items {
+			errors = append(errors, item.Create.Error.Reason)
+		}
+		return fmt.Errorf("error during bulk operation, try less workers (lower -w value) or increase thread_pool.bulk.queue_size in your nodes or check error on server. Errors: %s", errors)
 	}
 	return nil
 }
