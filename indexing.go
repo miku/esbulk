@@ -81,6 +81,30 @@ func (o *Options) SetServer(s string) error {
 	return nil
 }
 
+//nestedStr handles the nested JSON values
+func nestedStr(tokstr []string, docmap map[string]interface{}, currentID string) interface{} {
+	thistok := tokstr[0]
+	tempStr2, ok := docmap[thistok].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	var TokenVal interface{}
+	var ok1 bool
+	TokenVal = tempStr2
+	for count3 := 1; count3 < len(tokstr); count3++ {
+		thistok = tokstr[count3]
+		TokenVal, ok1 = tempStr2[thistok]
+		if !ok1 {
+			return nil
+		}
+		if count3 < len(tokstr)-1 {
+			tempStr2 = TokenVal.(map[string]interface{})
+		}
+	}
+	return TokenVal
+
+}
+
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch.
 func BulkIndex(docs []string, options Options) error {
 	if len(docs) == 0 {
@@ -105,67 +129,42 @@ func BulkIndex(docs []string, options Options) error {
 				return err
 			}
 
-			idstring := options.IDField                            //A delimiter separates string with all the fields to be used as ID
-			id:=strings.FieldsFunc(idstring, func (r rune) bool { return r == ',' || r == ' '})			
-		//	idtemp := strings.Split(idstring, ",")
-		//	id := strings.Split(idtemp, " ")
+			idstring := options.IDField //A delimiter separates string with all the fields to be used as ID
+			id := strings.FieldsFunc(idstring, func(r rune) bool { return r == ',' || r == ' ' })
 			// ID can be any type at this point, try to find a string
 			// representation or bail out.
 			var idstr string
-			var currrentId string
-			for counter:= range id{
-				currrentId = id[counter]
-				tokstr := strings.Split(currrentId,".")
-				if len(tokstr)>1{
-					thistok := tokstr[0]				
-					tempStr2, ok := docmap[thistok].(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("document has no ID field (%s): %s", currrentId, doc)
-					}
-					var TokenVal interface{}
-					var ok1 bool
-					TokenVal = tempStr2
-					for count3:=1;count3<len(tokstr);count3++{
-						thistok = tokstr[count3]
-						TokenVal, ok1 = tempStr2[thistok]
- 						if !ok1 {
-							return fmt.Errorf("document has no ID field (%s): %s", currrentId, doc)
-						}
-						if(count3<len(tokstr)-1){
-							tempStr2 = TokenVal.(map[string]interface{})
-						}
-					}
-					switch tempStr1:= interface{}(TokenVal).(type){
-						case string:
-							idstr=idstr + tempStr1
-						case fmt.Stringer:
-							idstr = idstr + tempStr1.String()					
-						case json.Number:
-							idstr = idstr + tempStr1.String()
-						default:
-							return fmt.Errorf("cannot convert id value to string")
+			var currentID string
+			for counter := range id {
+				currentID = id[counter]
+				tokstr := strings.Split(currentID, ".")
+				var TokenVal interface{}
+				if len(tokstr) > 1 {
+					TokenVal = nestedStr(tokstr, docmap, currentID)
+					if TokenVal == nil {
+						return fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
 					}
 				} else {
-					var TokenVal interface{}
 					var ok2 bool
-					TokenVal,ok2 = docmap[currrentId]
+					TokenVal, ok2 = docmap[currentID]
 					if !ok2 {
-						return fmt.Errorf("document has no ID field here (%s): %s", currrentId, doc)
-					}
-					switch tempStr1:= interface{}(TokenVal).(type){
-						case string:
-							idstr=idstr + tempStr1
-						case fmt.Stringer:
-							idstr = idstr + tempStr1.String()					
-						case json.Number:
-							idstr = idstr + tempStr1.String()
-						default:
-							return fmt.Errorf("cannot convert id value to string")
-				
+						return fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
 					}
 				}
+				switch tempStr1 := interface{}(TokenVal).(type) {
+				case string:
+					idstr = idstr + tempStr1
+				case fmt.Stringer:
+					idstr = idstr + tempStr1.String()
+				case json.Number:
+					idstr = idstr + tempStr1.String()
+				default:
+					return fmt.Errorf("cannot convert id value to string")
+
+				}
+
 			}
-                                                                                                //enigma end
+
 			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": "%s"}}`,
 				options.Index, options.DocType, idstr)
 
@@ -173,12 +172,12 @@ func BulkIndex(docs []string, options Options) error {
 			// Field [_id] is a metadata field and cannot be added inside a
 			// document.
 			var flag int = 0
-			for count:= range id{
-				if id[count]=="_id"{
-					flag = 1                          //check if any of the id fields to be concatenated is named '_id'
+			for count := range id {
+				if id[count] == "_id" {
+					flag = 1 //check if any of the id fields to be concatenated is named '_id'
 				}
 			}
-			
+
 			if flag == 1 {
 				delete(docmap, "_id")
 				b, err := json.Marshal(docmap)
