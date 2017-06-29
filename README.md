@@ -153,6 +153,49 @@ Here, we would like to reuse the ID from field *x*.
       }
     }
 
+Nested ID fields
+----------------
+
+Version 0.4.3 adds support for nested ID fields:
+
+```
+$ cat fixtures/pr-8-1.json
+{"a": {"b": 1}}
+{"a": {"b": 2}}
+{"a": {"b": 3}}
+
+$ esbulk -index throwaway -id a.b < fixtures/pr-8-1.json
+...
+```
+
+Concatenated ID
+---------------
+
+Version 0.4.3 adds support for IDs that are the concatenation of multiple fields:
+
+```
+$ cat fixtures/pr-8-2.json
+{"a": {"b": 1}, "c": "a"}
+{"a": {"b": 2}, "c": "b"}
+{"a": {"b": 3}, "c": "c"}
+
+$ esbulk -index throwaway -id a.b,c < fixtures/pr-8-1.json
+...
+
+      {
+        "_index": "xxx",
+        "_type": "default",
+        "_id": "1a",
+        "_score": 1,
+        "_source": {
+          "a": {
+            "b": 1
+          },
+          "c": "a"
+        }
+      },
+```
+
 Using X-Pack
 ------------
 
