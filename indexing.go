@@ -12,9 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
-var ErrParseCannotServerAddr = errors.New("cannot parse server address")
+var errParseCannotServerAddr = errors.New("cannot parse server address")
 
 // Options represents bulk indexing options.
 type Options struct {
@@ -38,10 +40,13 @@ type Item struct {
 		ID     string `json:"_id"`
 		Status int    `json:"status"`
 		Error  struct {
-			Type   string `json:"type"`
-			Reason string `json:"reason"`
+			Type      string `json:"type"`
+			Reason    string `json:"reason"`
+			IndexUUID string `json:"index_uuid"`
+			Shard     string `json:"shard"`
+			Index     string `json:"index"`
 		} `json:"error"`
-	}
+	} `json:"index"`
 }
 
 // BulkResponse is a response to a bulk request.
@@ -76,7 +81,7 @@ func (o *Options) SetServer(s string) error {
 		}
 		o.Port = port
 	default:
-		return ErrParseCannotServerAddr
+		return errParseCannotServerAddr
 	}
 	return nil
 }
@@ -110,7 +115,8 @@ func BulkIndex(docs []string, options Options) error {
 	if len(docs) == 0 {
 		return nil
 	}
-	link := fmt.Sprintf("%s://%s:%d/%s/%s/_bulk", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
+	link := fmt.Sprintf("%s://%s:%d/_bulk", options.Scheme, options.Host, options.Port)
+	// link := fmt.Sprintf("%s://%s:%d/%s/%s/_bulk", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
 		if len(strings.TrimSpace(doc)) == 0 {
@@ -123,7 +129,7 @@ func BulkIndex(docs []string, options Options) error {
 		// use it in the header.
 		if options.IDField != "" {
 			var docmap map[string]interface{}
-			dec := json.NewDecoder(strings.NewReader(doc))
+			dec := jsoniter.NewDecoder(strings.NewReader(doc))
 			dec.UseNumber()
 			if err := dec.Decode(&docmap); err != nil {
 				return err
@@ -160,9 +166,7 @@ func BulkIndex(docs []string, options Options) error {
 					idstr = idstr + tempStr1.String()
 				default:
 					return fmt.Errorf("cannot convert id value to string")
-
 				}
-
 			}
 
 			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": "%s"}}`,
@@ -171,7 +175,7 @@ func BulkIndex(docs []string, options Options) error {
 			// Remove the IDField if it is accidentally named '_id', since
 			// Field [_id] is a metadata field and cannot be added inside a
 			// document.
-			var flag int = 0
+			var flag int // 0 by default
 			for count := range id {
 				if id[count] == "_id" {
 					flag = 1 //check if any of the id fields to be concatenated is named '_id'
@@ -180,7 +184,7 @@ func BulkIndex(docs []string, options Options) error {
 
 			if flag == 1 {
 				delete(docmap, "_id")
-				b, err := json.Marshal(docmap)
+				b, err := jsoniter.Marshal(docmap)
 				if err != nil {
 					return err
 				}
@@ -205,7 +209,7 @@ func BulkIndex(docs []string, options Options) error {
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
-
+	req.Header.Set("Content-Type", "application/json")
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -222,11 +226,17 @@ func BulkIndex(docs []string, options Options) error {
 	}
 
 	var br BulkResponse
-	if err := json.NewDecoder(response.Body).Decode(&br); err != nil {
+	if err := jsoniter.NewDecoder(response.Body).Decode(&br); err != nil {
 		return err
 	}
 	if br.HasErrors {
-		return fmt.Errorf("error during bulk operation, try less workers (lower -w value) or increase thread_pool.bulk.queue_size in your nodes")
+		if options.Verbose {
+			log.Println("Error details: ")
+			for _, v := range br.Items {
+				log.Printf("  %q\n", v.IndexAction.Error)
+			}
+		}
+		return fmt.Errorf("error during bulk operation, check error details, try less workers (lower -w value) or  increase thread_pool.bulk.queue_size in your nodes")
 	}
 	return nil
 }
@@ -280,6 +290,7 @@ func PutMapping(options Options, body io.Reader) error {
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -301,6 +312,7 @@ func CreateIndex(options Options) error {
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -320,6 +332,7 @@ func CreateIndex(options Options) error {
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -348,6 +361,7 @@ func DeleteIndex(options Options) error {
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
