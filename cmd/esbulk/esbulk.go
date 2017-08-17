@@ -19,7 +19,7 @@ import (
 )
 
 // Application Version.
-const Version = "0.4.3"
+const Version = "0.4.4"
 
 func main() {
 
@@ -155,6 +155,7 @@ func main() {
 		if options.Username != "" && options.Password != "" {
 			req.SetBasicAuth(options.Username, options.Password)
 		}
+		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Fatal(err)
@@ -171,6 +172,7 @@ func main() {
 		if options.Username != "" && options.Password != "" {
 			req.SetBasicAuth(options.Username, options.Password)
 		}
+		req.Header.Set("Content-Type", "application/json")
 		resp, err = client.Do(req)
 		if err != nil {
 			log.Fatal(err)
@@ -189,6 +191,7 @@ func main() {
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
