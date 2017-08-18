@@ -208,3 +208,10 @@ $ esbulk -u elastic:changeme -index myindex file.ldj
 ----
 
 A similar project has been started for solr, called [solrbulk](https://github.com/miku/solrbulk).
+
+Contributors
+------------
+
+* [klaubert](https://github.com/klaubert)
+* [sakshambathla](https://github.com/sakshambathla)
+
