@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 var errParseCannotServerAddr = errors.New("cannot parse server address")
@@ -116,7 +114,6 @@ func BulkIndex(docs []string, options Options) error {
 		return nil
 	}
 	link := fmt.Sprintf("%s://%s:%d/_bulk", options.Scheme, options.Host, options.Port)
-	// link := fmt.Sprintf("%s://%s:%d/%s/%s/_bulk", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
 	var lines []string
 	for _, doc := range docs {
 		if len(strings.TrimSpace(doc)) == 0 {
@@ -129,7 +126,7 @@ func BulkIndex(docs []string, options Options) error {
 		// use it in the header.
 		if options.IDField != "" {
 			var docmap map[string]interface{}
-			dec := jsoniter.NewDecoder(strings.NewReader(doc))
+			dec := json.NewDecoder(strings.NewReader(doc))
 			dec.UseNumber()
 			if err := dec.Decode(&docmap); err != nil {
 				return err
@@ -184,7 +181,7 @@ func BulkIndex(docs []string, options Options) error {
 
 			if flag == 1 {
 				delete(docmap, "_id")
-				b, err := jsoniter.Marshal(docmap)
+				b, err := json.Marshal(docmap)
 				if err != nil {
 					return err
 				}
@@ -226,7 +223,7 @@ func BulkIndex(docs []string, options Options) error {
 	}
 
 	var br BulkResponse
-	if err := jsoniter.NewDecoder(response.Body).Decode(&br); err != nil {
+	if err := json.NewDecoder(response.Body).Decode(&br); err != nil {
 		return err
 	}
 	if br.HasErrors {
