@@ -166,7 +166,7 @@ func BulkIndex(docs []string, options Options) error {
 				}
 			}
 
-			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": "%s"}}`,
+			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": %q}}`,
 				options.Index, options.DocType, idstr)
 
 			// Remove the IDField if it is accidentally named '_id', since
