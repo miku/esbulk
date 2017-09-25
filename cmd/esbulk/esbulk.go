@@ -226,7 +226,7 @@ func main() {
 		}
 		line = strings.TrimSpace(line)
 		queue <- line
-		counter += 1
+		counter++
 	}
 
 	close(queue)
