@@ -225,6 +225,9 @@ func main() {
 			log.Fatal(err)
 		}
 		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
 		queue <- line
 		counter++
 	}
