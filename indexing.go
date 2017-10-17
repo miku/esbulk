@@ -322,6 +322,20 @@ func CreateIndex(options Options) error {
 		return nil
 	}
 
+	// Elasticsearch backwards compat.
+	if resp.StatusCode == 400 {
+		var errResponse struct {
+			Error  string `json:"error"`
+			Status int    `json:"status"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
+			return err
+		}
+		if strings.Contains(errResponse.Error, "IndexAlreadyExistsException") {
+			return nil
+		}
+	}
+
 	req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
 	if err != nil {
 		return err
