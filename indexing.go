@@ -322,22 +322,6 @@ func CreateIndex(options Options) error {
 		return nil
 	}
 
-	// // Elasticsearch backwards compat.
-	// if resp.StatusCode == 400 {
-	// 	var errResponse struct {
-	// 		Error  string `json:"error"`
-	// 		Status int    `json:"status"`
-	// 	}
-	// 	rdr := io.TeeReader(resp.Body, os.Stderr)
-	// 	// Might return a 400 on "No handler found for uri" ...
-	// 	if err := json.NewDecoder(rdr).Decode(&errResponse); err == nil {
-	// 		if strings.Contains(errResponse.Error, "IndexAlreadyExistsException") {
-	// 			return nil
-	// 		}
-	// 	}
-	// 	io.WriteString(os.Stderr, "\n")
-	// }
-
 	req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
 	if err != nil {
 		return err
