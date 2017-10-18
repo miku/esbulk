@@ -330,11 +330,11 @@ func CreateIndex(options Options) error {
 			Status int    `json:"status"`
 		}
 		rdr := io.TeeReader(resp.Body, os.Stderr)
-		if err := json.NewDecoder(rdr).Decode(&errResponse); err != nil {
-			return err
-		}
-		if strings.Contains(errResponse.Error, "IndexAlreadyExistsException") {
-			return nil
+		// Might return a 400 on "No handler found for uri" ...
+		if err := json.NewDecoder(rdr).Decode(&errResponse); err == nil {
+			if strings.Contains(errResponse.Error, "IndexAlreadyExistsException") {
+				return nil
+			}
 		}
 	}
 
