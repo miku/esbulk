@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -328,7 +329,8 @@ func CreateIndex(options Options) error {
 			Error  string `json:"error"`
 			Status int    `json:"status"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
+		rdr := io.TeeReader(resp.Body, os.Stderr)
+		if err := json.NewDecoder(rdr).Decode(&errResponse); err != nil {
 			return err
 		}
 		if strings.Contains(errResponse.Error, "IndexAlreadyExistsException") {
