@@ -336,6 +336,7 @@ func CreateIndex(options Options) error {
 				return nil
 			}
 		}
+		io.WriteString(os.Stderr, "\n")
 	}
 
 	req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
