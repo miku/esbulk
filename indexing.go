@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -355,14 +354,15 @@ func CreateIndex(options Options) error {
 			Error  string `json:"error"`
 			Status int    `json:"status"`
 		}
-		rdr := io.TeeReader(resp.Body, os.Stderr)
+		var buf bytes.Buffer
+		rdr := io.TeeReader(resp.Body, &buf)
 		// Might return a 400 on "No handler found for uri" ...
 		if err := json.NewDecoder(rdr).Decode(&errResponse); err == nil {
 			if strings.Contains(errResponse.Error, "IndexAlreadyExistsException") {
 				return nil
 			}
 		}
-		io.WriteString(os.Stderr, "\n")
+		log.Printf("es response was: %s", buf.String())
 	}
 
 	if err != nil {
