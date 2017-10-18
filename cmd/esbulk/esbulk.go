@@ -19,7 +19,7 @@ import (
 )
 
 // Application Version.
-const Version = "0.4.7"
+const Version = "0.4.8"
 
 func main() {
 
