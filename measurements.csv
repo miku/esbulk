@@ -1,4 +1,4 @@
-es,esbulk,docs,avg_doc_size_b,machines,cores,heap_gb,duration_s,doc_per_s
+es,esbulk,docs,avg_doc_size_b,machines,cores,heap_gb,duration_s,docs_per_s
 6.1.2,0.4.8,138000000,2000,1,32,64,6420,22100
 6.1.2,0.4.8,138000000,2000,1,8,30,27360,5100
 6.1.2,0.4.8,1000000,2000,1,4,1,300,3300
