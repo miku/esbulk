@@ -215,3 +215,16 @@ Contributors
 * [klaubert](https://github.com/klaubert)
 * [sakshambathla](https://github.com/sakshambathla)
 
+
+Measurements
+------------
+
+```shell
+$ csvlook -I measurements.csv
+| es_version | esbulk_version | docs      | average_doc_size_b | machines | cores | heap_gb | duration_s | doc_per_s |
+| ---------- | -------------- | --------- | ------------------ | -------- | ----- | ------- | ---------- | --------- |
+| 6.1.2      | 0.4.8          | 138000000 | 2000               | 1        | 32    | 64      | 6420       | 22100     |
+
+```
+
+Why not add a [row](https://github.com/miku/esbulk/pulls)?
