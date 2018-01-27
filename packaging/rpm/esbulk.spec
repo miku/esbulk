@@ -30,6 +30,9 @@ mkdir -p $RPM_BUILD_ROOT/usr/local/sbin
 # the argument on -m is the permissions expressed as octal. (See chmod man page for details.)
 install -m 755 esbulk $RPM_BUILD_ROOT/usr/local/sbin
 
+mkdir -p $RPM_BUILD_ROOT/usr/local/share/man/man1
+install -m 644 esbulk.1 $RPM_BUILD_ROOT/usr/local/share/man/man1/esbulk.1
+
 %post
 # the post section is where you can run commands after the rpm is installed.
 # insserv /etc/init.d/my_maintenance
@@ -43,7 +46,7 @@ rm -rf %{_topdir}/BUILD/%{name}
 %files
 %defattr(-,root,root)
 /usr/local/sbin/esbulk
-
+/usr/local/share/man/man1/esbulk.1
 
 %changelog
 * Mon Nov 28 2016 Martin Czygan
