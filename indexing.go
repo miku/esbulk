@@ -295,6 +295,13 @@ func PutMapping(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
+	if resp.StatusCode != 200 {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, resp.Body); err != nil {
+			return err
+		}
+		return fmt.Errorf("failed to apply mapping with %s: %s", resp.Status, buf.String())
+	}
 	if options.Verbose {
 		log.Printf("applied mapping: %s", resp.Status)
 	}
