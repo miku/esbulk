@@ -135,6 +135,7 @@ func main() {
 		if err := esbulk.DeleteIndex(options); err != nil {
 			log.Fatal(err)
 		}
+		time.Sleep(5 * time.Second)
 	}
 
 	// create index if not exists
