@@ -21,6 +21,9 @@ indexed in parallel to achieve a high indexing throughput.
 OPTIONS
 -------
 
+`-0` set the number of replicas to 0 during indexing (this can speed up
+     indexing significantly)
+
 `-cpuprofile` *filename*
   Write cpu profile to given filename.
 

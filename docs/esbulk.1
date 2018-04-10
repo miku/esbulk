@@ -11,6 +11,9 @@ esbulk takes as input a newline delimited JSON file and indexes all documents
 into elasticsearch running on a given server address. The documents are batched and
 indexed in parallel to achieve a high indexing throughput.
 .SH OPTIONS
+.PP
+\fB\fC\-0\fR set the number of replicas to 0 during indexing (this can speed up
+     indexing significantly)
 .TP
 \fB\fC\-cpuprofile\fR \fIfilename\fP
 Write cpu profile to given filename.
@@ -61,13 +64,17 @@ Number of workers.
 Decompress gzip input file on the fly.
 .SH EXAMPLES
 .PP
-Index a file:
+Index a compressed file:
 .IP
-\fB\fCesbulk \-verbose \-server 110.81.131.200:9200 file.ldj\fR
+\fB\fCesbulk \-index abc \-verbose \-server 110.81.131.200:9200 \-z file.ldj.gz\fR
 .PP
-Index from compressed standard input:
+Index from standard input:
 .IP
-\fB\fCcat file.ldj.gz | esbulk \-z \-server 110.81.131.200:9200\fR
+\fB\fCcat file.ldj | esbulk \-index abc \-server 110.81.131.200:9200\fR
+.PP
+Purge an existing index, apply a mapping from a file and index:
+.IP
+\fB\fCesbulk \-purge \-mapping mapping.json \-index abc file.ldj\fR
 .SH DIAGNOSITCS
 .PP
 If indexing pressure on the bulk API is too high (dozens or hundreds of
