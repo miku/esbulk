@@ -21,8 +21,8 @@ indexed in parallel to achieve a high indexing throughput.
 OPTIONS
 -------
 
-`-0` set the number of replicas to 0 during indexing (this can speed up
-     indexing significantly)
+`-0`
+  set the number of replicas to 0 during indexing (this can speed up indexing significantly, the original value is restored at the end an may cause some delay until the cluster is green)
 
 `-cpuprofile` *filename*
   Write cpu profile to given filename.
