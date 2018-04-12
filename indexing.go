@@ -7,17 +7,20 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 var errParseCannotServerAddr = errors.New("cannot parse server address")
 
 // Options represents bulk indexing options.
 type Options struct {
+	Servers   []string
 	Host      string
 	Port      int
 	Index     string
@@ -113,7 +116,12 @@ func BulkIndex(docs []string, options Options) error {
 	if len(docs) == 0 {
 		return nil
 	}
-	link := fmt.Sprintf("%s://%s:%d/_bulk", options.Scheme, options.Host, options.Port)
+
+	rand.Seed(time.Now().Unix())
+	server := options.Servers[rand.Intn(len(options.Servers))]
+	// link := fmt.Sprintf("%s://%s:%d/_bulk", options.Scheme, options.Host, options.Port)
+	link := fmt.Sprintf("%s/_bulk", server)
+
 	var lines []string
 	for _, doc := range docs {
 		if len(strings.TrimSpace(doc)) == 0 {
@@ -279,7 +287,12 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 
 // PutMapping applies a mapping from a reader.
 func PutMapping(options Options, body io.Reader) error {
-	link := fmt.Sprintf("%s://%s:%d/%s/_mapping/%s", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
+
+	rand.Seed(time.Now().Unix())
+	server := options.Servers[rand.Intn(len(options.Servers))]
+	// link := fmt.Sprintf("%s/%s/_mapping/%s", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
+	link := fmt.Sprintf("%s/%s/_mapping/%s", server, options.Index, options.DocType)
+
 	if options.Verbose {
 		log.Printf("applying mapping: %s", link)
 	}
@@ -310,7 +323,11 @@ func PutMapping(options Options, body io.Reader) error {
 
 // CreateIndex creates a new index.
 func CreateIndex(options Options) error {
-	link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
+	rand.Seed(time.Now().Unix())
+	server := options.Servers[rand.Intn(len(options.Servers))]
+	// link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
+	link := fmt.Sprintf("%s/%s", server, options.Index)
+
 	req, err := http.NewRequest("GET", link, nil)
 	if err != nil {
 		return err
@@ -332,7 +349,9 @@ func CreateIndex(options Options) error {
 		return nil
 	}
 
-	req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
+	// req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
+	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), nil)
+
 	if err != nil {
 		return err
 	}
@@ -378,7 +397,11 @@ func CreateIndex(options Options) error {
 
 // DeleteIndex removes an index.
 func DeleteIndex(options Options) error {
-	link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
+	rand.Seed(time.Now().Unix())
+	server := options.Servers[rand.Intn(len(options.Servers))]
+	// link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
+	link := fmt.Sprintf("%s/%s", server, options.Index)
+
 	req, err := http.NewRequest("DELETE", link, nil)
 	if err != nil {
 		return err

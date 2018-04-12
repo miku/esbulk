@@ -50,12 +50,14 @@ func indexSettingsRequest(body string, options esbulk.Options) (*http.Response, 
 
 func main() {
 
+	var serverFlags esbulk.ArrayFlags
+
 	version := flag.Bool("v", false, "prints current program version")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write heap profile to file")
 	indexName := flag.String("index", "", "index name")
 	docType := flag.String("type", "default", "elasticsearch doc type")
-	server := flag.String("server", "http://localhost:9200", "elasticsearch server, this works with https as well")
+	flag.Var(&serverFlags, "server", "elasticsearch server, this works with https as well")
 	host := flag.String("host", "localhost", "elasticsearch host (deprecated: use -server instead)")
 	port := flag.Int("port", 9200, "elasticsearch port (deprecated: use -server instead)")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
@@ -88,6 +90,14 @@ func main() {
 		log.Fatal("index name required")
 	}
 
+	if len(serverFlags) == 0 {
+		serverFlags = append(serverFlags, "http://localhost:9200")
+	}
+
+	if *verbose {
+		log.Printf("using %d servers", len(serverFlags))
+	}
+
 	var file io.Reader = os.Stdin
 
 	if flag.NArg() > 0 {
@@ -112,6 +122,7 @@ func main() {
 	}
 
 	options := esbulk.Options{
+		Servers:   serverFlags,
 		Host:      *host,
 		Port:      *port,
 		Index:     *indexName,
@@ -127,9 +138,13 @@ func main() {
 	// backwards-compat for -host and -port, only use newer -server flag if
 	// older -host and -port are on defaults
 	if *host == "localhost" && *port == 9200 {
-		if err := options.SetServer(*server); err != nil {
+		if err := options.SetServer(serverFlags[0]); err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	if *verbose {
+		log.Println(options)
 	}
 
 	if *purge {
