@@ -21,14 +21,14 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 // Options represents bulk indexing options.
 type Options struct {
 	Servers   []string
-	Host      string
-	Port      int
+	Host      string // deprecated: Use Servers.
+	Port      int    // deprecated: Use Servers.
 	Index     string
 	DocType   string
 	BatchSize int
 	Verbose   bool
 	IDField   string
-	Scheme    string // http or https
+	Scheme    string // http or https; deprecated: Use Servers.
 	Username  string
 	Password  string
 }
@@ -68,7 +68,7 @@ func (o *Options) SetServer(s string) error {
 	switch len(parts) {
 	case 1:
 		log.Println(s, locator.Host, parts)
-		// assume port, like https://:9200
+		// Assume port, like https://:9200.
 		port, err := strconv.Atoi(parts[0])
 		if err != nil {
 			return err
@@ -87,7 +87,7 @@ func (o *Options) SetServer(s string) error {
 	return nil
 }
 
-//nestedStr handles the nested JSON values
+// nestedStr handles the nested JSON values.
 func nestedStr(tokstr []string, docmap map[string]interface{}, currentID string) interface{} {
 	thistok := tokstr[0]
 	tempStr2, ok := docmap[thistok].(map[string]interface{})
@@ -119,7 +119,6 @@ func BulkIndex(docs []string, options Options) error {
 
 	rand.Seed(time.Now().Unix())
 	server := options.Servers[rand.Intn(len(options.Servers))]
-	// link := fmt.Sprintf("%s://%s:%d/_bulk", options.Scheme, options.Host, options.Port)
 	link := fmt.Sprintf("%s/_bulk", server)
 
 	var lines []string
@@ -183,7 +182,7 @@ func BulkIndex(docs []string, options Options) error {
 			var flag int // 0 by default
 			for count := range id {
 				if id[count] == "_id" {
-					flag = 1 //check if any of the id fields to be concatenated is named '_id'
+					flag = 1 // Check if any of the id fields to be concatenated is named '_id'.
 				}
 			}
 
@@ -290,7 +289,6 @@ func PutMapping(options Options, body io.Reader) error {
 
 	rand.Seed(time.Now().Unix())
 	server := options.Servers[rand.Intn(len(options.Servers))]
-	// link := fmt.Sprintf("%s/%s/_mapping/%s", options.Scheme, options.Host, options.Port, options.Index, options.DocType)
 	link := fmt.Sprintf("%s/%s/_mapping/%s", server, options.Index, options.DocType)
 
 	if options.Verbose {
@@ -325,7 +323,6 @@ func PutMapping(options Options, body io.Reader) error {
 func CreateIndex(options Options) error {
 	rand.Seed(time.Now().Unix())
 	server := options.Servers[rand.Intn(len(options.Servers))]
-	// link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
 	link := fmt.Sprintf("%s/%s", server, options.Index)
 
 	req, err := http.NewRequest("GET", link, nil)
@@ -344,12 +341,11 @@ func CreateIndex(options Options) error {
 	}
 	defer resp.Body.Close()
 
-	// index already exists, return
+	// Index already exists, return.
 	if resp.StatusCode == 200 {
 		return nil
 	}
 
-	// req, err = http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/", options.Scheme, options.Host, options.Port, options.Index), nil)
 	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), nil)
 
 	if err != nil {
@@ -399,7 +395,6 @@ func CreateIndex(options Options) error {
 func DeleteIndex(options Options) error {
 	rand.Seed(time.Now().Unix())
 	server := options.Servers[rand.Intn(len(options.Servers))]
-	// link := fmt.Sprintf("%s://%s:%d/%s", options.Scheme, options.Host, options.Port, options.Index)
 	link := fmt.Sprintf("%s/%s", server, options.Index)
 
 	req, err := http.NewRequest("DELETE", link, nil)
