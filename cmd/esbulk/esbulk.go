@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"compress/gzip"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -184,91 +183,49 @@ func main() {
 		go esbulk.Worker(fmt.Sprintf("worker-%d", i), options, queue, &wg)
 	}
 
-	client := &http.Client{}
+	for i, _ := range options.Servers {
+		// Store number_of_replicas settings for restoration later.
+		doc, err := esbulk.GetSettings(i, options)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	// Store number_of_replicas settings for restoration later.
-	link := fmt.Sprintf("%s://%s:%d/%s/_settings", options.Scheme, options.Host, options.Port, options.Index)
-	resp, err := http.Get(link)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		log.Fatalf("could not get settings: %s", link)
-	}
+		// TODO(miku): Rework this.
+		numberOfReplicas := doc[options.Index].(map[string]interface{})["settings"].(map[string]interface{})["index"].(map[string]interface{})["number_of_replicas"]
+		if *verbose {
+			log.Printf("on shutdown, number_of_replicas will be set back to %s", numberOfReplicas)
+		}
 
-	doc := make(map[string]interface{})
-	dec := json.NewDecoder(resp.Body)
-	if err := dec.Decode(&doc); err != nil {
-		log.Fatal(err)
-	}
-	// Example response.
-	// {
-	// 	"ai": {
-	// 	  "settings": {
-	// 		"index": {
-	// 		  "refresh_interval": "1s",
-	// 		  "number_of_shards": "5",
-	// 		  "provided_name": "ai",
-	// 		  "creation_date": "1523372145102",
-	// 		  "number_of_replicas": "1",
-	// 		  "uuid": "5k-id0OZTKKU4A7DeeUNdQ",
-	// 		  "version": {
-	// 			"created": "6020399"
-	// 		  }
-	// 		}
-	// 	  }
-	// 	}
-	// }
+		// Shutdown procedure. TODO(miku): Handle signals, too.
+		defer func() {
+			// Realtime search.
+			if _, err := indexSettingsRequest(`{"index": {"refresh_interval": "1s"}}`, options); err != nil {
+				log.Fatal(err)
+			}
+			// Reset number of replicas.
+			if _, err := indexSettingsRequest(fmt.Sprintf(`{"index": {"number_of_replicas": %q}}`, numberOfReplicas), options); err != nil {
+				log.Fatal(err)
+			}
 
-	// TODO(miku): Rework this.
-	numberOfReplicas := doc[options.Index].(map[string]interface{})["settings"].(map[string]interface{})["index"].(map[string]interface{})["number_of_replicas"]
-	if *verbose {
-		log.Printf("on shutdown, number_of_replicas will be set back to %s", numberOfReplicas)
-	}
+			// Persist documents.
+			if err := esbulk.FlushIndex(i, options); err != nil {
+				log.Fatal(err)
+			}
+		}()
 
-	// Shutdown procedure. TODO(miku): Handle signals, too.
-	defer func() {
 		// Realtime search.
-		if _, err := indexSettingsRequest(`{"index": {"refresh_interval": "1s"}}`, options); err != nil {
-			log.Fatal(err)
-		}
-		// Reset number of replicas.
-		if _, err := indexSettingsRequest(fmt.Sprintf(`{"index": {"number_of_replicas": %q}}`, numberOfReplicas), options); err != nil {
-			log.Fatal(err)
-		}
-
-		// Persist documents.
-		link := fmt.Sprintf("%s://%s:%d/%s/_flush", options.Scheme, options.Host, options.Port, options.Index)
-		req, err := http.NewRequest("POST", link, nil)
+		resp, err := indexSettingsRequest(`{"index": {"refresh_interval": "-1"}}`, options)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if options.Username != "" && options.Password != "" {
-			req.SetBasicAuth(options.Username, options.Password)
+		if resp.StatusCode >= 400 {
+			log.Fatal(resp)
 		}
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if options.Verbose {
-			log.Printf("index flushed: %s\n", resp.Status)
-		}
-	}()
-
-	// Realtime search.
-	resp, err = indexSettingsRequest(`{"index": {"refresh_interval": "-1"}}`, options)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if resp.StatusCode >= 400 {
-		log.Fatal(resp)
-	}
-	if *zeroReplica {
-		// Reset number of replicas.
-		if _, err := indexSettingsRequest(`{"index": {"number_of_replicas": 0}}`, options); err != nil {
-			log.Fatal(err)
+		if *zeroReplica {
+			// Reset number of replicas.
+			if _, err := indexSettingsRequest(`{"index": {"number_of_replicas": 0}}`, options); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 
