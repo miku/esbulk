@@ -213,9 +213,9 @@ A similar project has been started for solr, called [solrbulk](https://github.co
 Contributors
 ------------
 
-* [klaubert](https://github.com/klaubert)
+* [Klaubert Herr](https://github.com/klaubert)
 * [sakshambathla](https://github.com/sakshambathla)
-
+* [KUOKA Yusuke](https://github.com/mumoshu)
 
 Measurements
 ------------
