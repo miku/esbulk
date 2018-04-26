@@ -136,7 +136,7 @@ func BulkIndex(docs []string, options Options) error {
 			dec := json.NewDecoder(strings.NewReader(doc))
 			dec.UseNumber()
 			if err := dec.Decode(&docmap); err != nil {
-				return err
+				return fmt.Errorf("failed to json decode doc: %v", err)
 			}
 
 			idstring := options.IDField //A delimiter separates string with all the fields to be used as ID
