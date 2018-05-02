@@ -23,7 +23,7 @@ const Version = "0.4.14"
 
 // indexSettingsRequest runs updates an index setting, given a body and options.
 func indexSettingsRequest(body string, options esbulk.Options) (*http.Response, error) {
-	// body consist of the JSON document, e.g. `{"index": {"refresh_interval": "1s"}}`
+	// Body consist of the JSON document, e.g. `{"index": {"refresh_interval": "1s"}}`.
 	r := strings.NewReader(body)
 	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
 		options.Scheme, options.Host, options.Port, options.Index), r)
@@ -134,8 +134,8 @@ func main() {
 		Password:  password,
 	}
 
-	// backwards-compat for -host and -port, only use newer -server flag if
-	// older -host and -port are on defaults
+	// Backwards compatibility for -host and -port, only use newer -server flag if
+	// older -host and -port are on defaults.
 	if *host == "localhost" && *port == 9200 {
 		if err := options.SetServer(serverFlags[0]); err != nil {
 			log.Fatal(err)
@@ -153,7 +153,7 @@ func main() {
 		time.Sleep(5 * time.Second)
 	}
 
-	// create index if not exists
+	// Create index if not exists.
 	if err := esbulk.CreateIndex(options); err != nil {
 		log.Fatal(err)
 	}

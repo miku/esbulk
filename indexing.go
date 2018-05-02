@@ -21,14 +21,14 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 // Options represents bulk indexing options.
 type Options struct {
 	Servers   []string
-	Host      string // deprecated: Use Servers.
-	Port      int    // deprecated: Use Servers.
+	Host      string // deprecated, use: Servers.
+	Port      int    // deprecated, use: Servers.
 	Index     string
 	DocType   string
 	BatchSize int
 	Verbose   bool
 	IDField   string
-	Scheme    string // http or https; deprecated: Use Servers.
+	Scheme    string // http or https; deprecated, use: Servers.
 	Username  string
 	Password  string
 }
@@ -139,7 +139,7 @@ func BulkIndex(docs []string, options Options) error {
 				return fmt.Errorf("failed to json decode doc: %v", err)
 			}
 
-			idstring := options.IDField //A delimiter separates string with all the fields to be used as ID
+			idstring := options.IDField // A delimiter separates string with all the fields to be used as ID.
 			id := strings.FieldsFunc(idstring, func(r rune) bool { return r == ',' || r == ' ' })
 			// ID can be any type at this point, try to find a string
 			// representation or bail out.
@@ -179,7 +179,7 @@ func BulkIndex(docs []string, options Options) error {
 			// Remove the IDField if it is accidentally named '_id', since
 			// Field [_id] is a metadata field and cannot be added inside a
 			// document.
-			var flag int // 0 by default
+			var flag int
 			for count := range id {
 				if id[count] == "_id" {
 					flag = 1 // Check if any of the id fields to be concatenated is named '_id'.

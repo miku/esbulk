@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// FlushIndex flushes index.
 func FlushIndex(idx int, options Options) error {
 	server := options.Servers[idx]
 	link := fmt.Sprintf("%s/%s/_flush", server, options.Index)
@@ -28,7 +29,7 @@ func FlushIndex(idx int, options Options) error {
 	return nil
 }
 
-// getSettingsRequest fetches the settings of the index.
+// GetSettings fetches the settings of the index.
 func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 	server := options.Servers[idx]
 	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)

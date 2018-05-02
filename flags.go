@@ -5,6 +5,7 @@ import "strings"
 // ArrayFlags allows to store lists of flag values.
 type ArrayFlags []string
 
+// String representation.
 func (f *ArrayFlags) String() string {
 	return strings.Join(*f, ", ")
 }
