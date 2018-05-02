@@ -116,12 +116,13 @@ Please report bugs to https://github.com/miku/esbulk/issues.
 AUTHORS
 ------
 
-Martin Czygan <martin.czygan@uni-leipzig.de>
-
-with contributions from sakshambathla <https://github.com/sakshambathla> and
+Martin Czygan <https://github.com/miku>, <martin.czygan@uni-leipzig.de>
+sakshambathla <https://github.com/sakshambathla>
 Klaubert Herr <https://github.com/klaubert>
+Yusuke KUOKA <https://github.com/mumoshu>
 
 SEE ALSO
 --------
 
 [FINC](https://finc.info), [AMSL](http://amsl.technology/), [solrbulk](https://github.com/miku/solrbulk)
+
