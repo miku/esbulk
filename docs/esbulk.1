@@ -10,10 +10,12 @@ esbulk \- send documents to elasticsearch in bulk and in parallel.
 esbulk takes as input a newline delimited JSON file and indexes all documents
 into elasticsearch running on a given server address. The documents are batched and
 indexed in parallel to achieve a high indexing throughput.
+.PP
+The newline delimited JSON text file format is explained at \[la]http://jsonlines.org/\[ra]\&.
 .SH OPTIONS
 .TP
 \fB\fC\-0\fR
-Set the number of replicas to 0 during indexing (this can speed up indexing significantly, the original value is restored at the end an may cause some delay until the cluster is green).
+Set the number of replicas to 0 during indexing (this can speed up indexing significantly, the original value is restored at the end and may cause delay until the cluster is green).
 .TP
 \fB\fC\-cpuprofile\fR \fIfilename\fP
 Write cpu profile to given filename.

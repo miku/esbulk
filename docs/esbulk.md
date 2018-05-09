@@ -18,11 +18,13 @@ esbulk takes as input a newline delimited JSON file and indexes all documents
 into elasticsearch running on a given server address. The documents are batched and
 indexed in parallel to achieve a high indexing throughput.
 
+The newline delimited JSON text file format is explained at http://jsonlines.org/.
+
 OPTIONS
 -------
 
 `-0`
-  Set the number of replicas to 0 during indexing (this can speed up indexing significantly, the original value is restored at the end an may cause some delay until the cluster is green).
+  Set the number of replicas to 0 during indexing (this can speed up indexing significantly, the original value is restored at the end and may cause delay until the cluster is green).
 
 `-cpuprofile` *filename*
   Write cpu profile to given filename.
