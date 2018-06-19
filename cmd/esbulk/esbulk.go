@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
@@ -25,8 +26,12 @@ const Version = "0.4.14"
 func indexSettingsRequest(body string, options esbulk.Options) (*http.Response, error) {
 	// Body consist of the JSON document, e.g. `{"index": {"refresh_interval": "1s"}}`.
 	r := strings.NewReader(body)
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s:%d/%s/_settings",
-		options.Scheme, options.Host, options.Port, options.Index), r)
+
+	rand.Seed(time.Now().Unix())
+	server := options.Servers[rand.Intn(len(options.Servers))]
+	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
+
+	req, err := http.NewRequest("PUT", link, r)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +62,6 @@ func main() {
 	indexName := flag.String("index", "", "index name")
 	docType := flag.String("type", "default", "elasticsearch doc type")
 	flag.Var(&serverFlags, "server", "elasticsearch server, this works with https as well")
-	host := flag.String("host", "localhost", "elasticsearch host (deprecated: use -server instead)")
-	port := flag.Int("port", 9200, "elasticsearch port (deprecated: use -server instead)")
 	batchSize := flag.Int("size", 1000, "bulk batch size")
 	numWorkers := flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose := flag.Bool("verbose", false, "output basic progress")
@@ -122,8 +125,6 @@ func main() {
 
 	options := esbulk.Options{
 		Servers:   serverFlags,
-		Host:      *host,
-		Port:      *port,
 		Index:     *indexName,
 		DocType:   *docType,
 		BatchSize: *batchSize,
@@ -132,14 +133,6 @@ func main() {
 		IDField:   *idfield,
 		Username:  username,
 		Password:  password,
-	}
-
-	// Backwards compatibility for -host and -port, only use newer -server flag if
-	// older -host and -port are on defaults.
-	if *host == "localhost" && *port == 9200 {
-		if err := options.SetServer(serverFlags[0]); err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	if *verbose {

@@ -9,8 +9,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,8 +19,6 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 // Options represents bulk indexing options.
 type Options struct {
 	Servers   []string
-	Host      string // deprecated, use: Servers.
-	Port      int    // deprecated, use: Servers.
 	Index     string
 	DocType   string
 	BatchSize int
@@ -55,36 +51,6 @@ type BulkResponse struct {
 	Took      int    `json:"took"`
 	HasErrors bool   `json:"errors"`
 	Items     []Item `json:"items"`
-}
-
-// SetServer parses out host and port for a string and sets the option values.
-func (o *Options) SetServer(s string) error {
-	locator, err := url.Parse(s)
-	if err != nil {
-		return err
-	}
-	o.Scheme = locator.Scheme
-	parts := strings.Split(locator.Host, ":")
-	switch len(parts) {
-	case 1:
-		log.Println(s, locator.Host, parts)
-		// Assume port, like https://:9200.
-		port, err := strconv.Atoi(parts[0])
-		if err != nil {
-			return err
-		}
-		o.Port = port
-	case 2:
-		o.Host = parts[0]
-		port, err := strconv.Atoi(parts[1])
-		if err != nil {
-			return err
-		}
-		o.Port = port
-	default:
-		return errParseCannotServerAddr
-	}
-	return nil
 }
 
 // nestedStr handles the nested JSON values.
