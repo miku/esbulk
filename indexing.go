@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/sethgrid/pester"
 )
 
 var errParseCannotServerAddr = errors.New("cannot parse server address")
@@ -180,13 +182,20 @@ func BulkIndex(docs []string, options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	response, err := http.DefaultClient.Do(req)
+
+	client := pester.New()
+	client.Concurrency = 1
+	client.MaxRetries = 9
+	client.Backoff = pester.ExponentialBackoff
+	client.KeepLog = true
+	response, err := client.Do(req)
 	if err != nil {
 		return err
 	}
+
 	defer response.Body.Close()
 
-	if response.StatusCode >= 400 {
+	if response.StatusCode >= 400 && response.StatusCode != 504 {
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, response.Body); err != nil {
 			return err
