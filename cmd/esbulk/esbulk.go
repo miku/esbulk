@@ -21,7 +21,7 @@ import (
 )
 
 // Version of application.
-const Version = "0.5.0"
+const Version = "0.5.1"
 
 var (
 	version     = flag.Bool("v", false, "prints current program version")
