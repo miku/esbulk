@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/sethgrid/pester"
 )
 
 // FlushIndex flushes index.
@@ -19,7 +21,7 @@ func FlushIndex(idx int, options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := pester.Do(req)
 	if err != nil {
 		return err
 	}
@@ -42,7 +44,7 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := pester.Do(req)
 	if err != nil {
 		return nil, err
 	}

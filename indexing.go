@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/sethgrid/pester"
 )
 
 var errParseCannotServerAddr = errors.New("cannot parse server address")
@@ -180,7 +182,7 @@ func BulkIndex(docs []string, options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	response, err := http.DefaultClient.Do(req)
+	response, err := pester.Do(req)
 	if err != nil {
 		return err
 	}
@@ -268,7 +270,7 @@ func PutMapping(options Options, body io.Reader) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := pester.Do(req)
 	if err != nil {
 		return err
 	}
@@ -301,7 +303,7 @@ func CreateIndex(options Options) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := pester.Do(req)
 	if err != nil {
 		return err
 	}
@@ -321,7 +323,7 @@ func CreateIndex(options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = pester.Do(req)
 
 	// Elasticsearch backwards compat.
 	if resp.StatusCode == 400 {
@@ -371,7 +373,7 @@ func DeleteIndex(options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := pester.Do(req)
 	if err != nil {
 		return err
 	}

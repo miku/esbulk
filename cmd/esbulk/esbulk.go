@@ -41,8 +41,7 @@ func indexSettingsRequest(body string, options esbulk.Options) (*http.Response, 
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := pester.Do(req)
 	if err != nil {
 		return nil, err
 	}
