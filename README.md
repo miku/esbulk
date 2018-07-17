@@ -1,7 +1,7 @@
 esbulk
 ======
 
-Fast parallel bulk loading utility for elasticsearch. Data is read from a
+Fast parallel command line [bulk loading](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html) utility for elasticsearch. Data is read from a
 newline delimited JSON file or stdin and indexed into elasticsearch in bulk
 *and* in parallel. The shortest command would be:
 
