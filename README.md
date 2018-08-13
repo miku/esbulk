@@ -34,6 +34,15 @@ Installation
 
 For `deb` or `rpm` packages, see: https://github.com/miku/esbulk/releases
 
+[intenthq](https://www.intenthq.com/) made available a Docker image at
+[intenthq/esbulk-docker](https://hub.docker.com/r/intenthq/esbulk-docker/) as
+well (thanks @albertpastrana), #25.
+
+```
+$ docker run -it intenthq/esbulk-docker esbulk -v
+0.5.1
+```
+
 Usage
 -----
 
