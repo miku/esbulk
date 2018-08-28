@@ -203,12 +203,13 @@ func BulkIndex(docs []string, options Options) error {
 	}
 	if br.HasErrors {
 		if options.Verbose {
-			log.Println("Error details: ")
+			log.Println("error details: ")
 			for _, v := range br.Items {
 				log.Printf("  %q\n", v.IndexAction.Error)
 			}
 		}
-		return fmt.Errorf("error during bulk operation, check error details, try less workers (lower -w value) or  increase thread_pool.bulk.queue_size in your nodes")
+		log.Printf("request body: %s", body)
+		return fmt.Errorf("error during bulk operation, check error details; maybe try fewer workers (-w) or increase thread_pool.bulk.queue_size in your nodes")
 	}
 	return nil
 }
@@ -339,7 +340,7 @@ func CreateIndex(options Options) error {
 				return nil
 			}
 		}
-		log.Printf("es response was: %s", buf.String())
+		log.Printf("elasticsearch response was: %s", buf.String())
 	}
 
 	if err != nil {
