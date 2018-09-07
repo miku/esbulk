@@ -163,8 +163,7 @@ func BulkIndex(docs []string, options Options) error {
 				doc = string(b)
 			}
 		}
-		lines = append(lines, header)
-		lines = append(lines, doc)
+		lines = append(lines, header, doc)
 	}
 
 	body := fmt.Sprintf("%s\n", strings.Join(lines, "\n"))
