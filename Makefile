@@ -36,11 +36,11 @@ esbulk:
 # ==== packaging
 
 image:
-	DOCKER_CONTENT_TRUST=0 docker build --rm -t esbulk:$(VERSION) .
+	DOCKER_CONTENT_TRUST=0 docker build --rm -t tirtir/esbulk:latest -t tirtir/esbulk:$(VERSION) .
 	docker rmi -f $$(docker images -q --filter label=stage=intermediate)
 
 rmi:
-	docker rmi esbulk:$(VERSION)
+	docker rmi tirtir/esbulk:$(VERSION)
 
 deb: $(TARGETS)
 	mkdir -p packaging/debian/esbulk/usr/sbin
