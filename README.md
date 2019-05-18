@@ -46,8 +46,8 @@ $ docker run -it --rm intenthq/esbulk-docker esbulk -v
 ```
 
 Since 0.5.2 (May 2019) there is a [Dockerfile](Dockerfile) included in the
-repo, it uses the multi-stage build and a FROM SCRATCH image, which allows for
-a lightweight 7.85MB image.
+repo, it uses a multi-stage build and a FROM SCRATCH base, which allows for a
+lightweight 7.85MB image.
 
 ```
 $ git clone https://github.com/miku/esbulk.git
