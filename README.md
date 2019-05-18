@@ -57,6 +57,13 @@ $ docker run -it esbulk:0.5.2 -v
 0.5.2
 ```
 
+Or, via hub/cloud:
+
+```
+$ docker run -it --rm tirtir/esbulk -v
+0.5.2
+```
+
 
 Usage
 -----
