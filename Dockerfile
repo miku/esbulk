@@ -2,6 +2,9 @@
 # STEP 1 build executable binary
 ################################
 FROM golang:1.12.5-alpine3.9 AS builder
+
+# https://github.com/moby/moby/issues/34513#issuecomment-389250632, we hope
+# this label is not used for something critical in your setup.
 LABEL stage=intermediate
 
 # Install git, required for fetching the dependencies.
