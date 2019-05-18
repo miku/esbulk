@@ -1,5 +1,5 @@
-SHELL := /bin/bash
 TARGETS = esbulk
+VERSION = 0.5.2
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
 test:
@@ -31,9 +31,16 @@ cover:
 	go tool cover -html=coverage.out
 
 esbulk:
-	go build cmd/esbulk/esbulk.go
+	CGO_ENABLED=0 go build cmd/esbulk/esbulk.go
 
 # ==== packaging
+
+image:
+	DOCKER_CONTENT_TRUST=0 docker build --rm -t esbulk:$(VERSION) .
+	docker rmi -f $$(docker images -q --filter label=stage=intermediate)
+
+rmi:
+	docker rmi esbulk:$(VERSION)
 
 deb: $(TARGETS)
 	mkdir -p packaging/debian/esbulk/usr/sbin
