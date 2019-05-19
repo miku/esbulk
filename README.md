@@ -53,7 +53,7 @@ lightweight 7.85MB image.
 $ git clone https://github.com/miku/esbulk.git
 $ cd esbulk
 $ make image # use make rmi to cleanup
-$ docker run -it esbulk:0.5.2 -v
+$ docker run -it --rm esbulk:0.5.2 -v
 0.5.2
 ```
 
