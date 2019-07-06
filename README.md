@@ -27,6 +27,9 @@ However, using defaults (parallism: number of cores) on a single node setup
 will just work. For larger clusters, increase the number of workers until you
 see full CPU utilization. After that, more workers won't buy any more speed.
 
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+![GitHub All Releases](https://img.shields.io/github/downloads/miku/esbulk/total.svg)
+
 Installation
 ------------
 
