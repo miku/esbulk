@@ -167,6 +167,9 @@ func BulkIndex(docs []string, options Options) error {
 	}
 
 	body := fmt.Sprintf("%s\n", strings.Join(lines, "\n"))
+	if options.Verbose {
+		log.Printf("message content-length will be %d", len(body))
+	}
 
 	// There are multiple ways indexing can fail, e.g. connection errors or
 	// bad requests. Finally, if we have a HTTP 200, the bulk request could
