@@ -191,21 +191,19 @@ func main() {
 		if *verbose {
 			log.Printf("on shutdown, number_of_replicas will be set back to %s", numberOfReplicas)
 		}
-		refreshInterval := *refreshInterval
 		if *verbose {
-			log.Printf("on shutdown, refresh_interval will be set back to %s", refreshInterval)
+			log.Printf("on shutdown, refresh_interval will be set back to %s", *refreshInterval)
 		}
 		// Shutdown procedure. TODO(miku): Handle signals, too.
 		defer func() {
 			// Realtime search.
-			if _, err := indexSettingsRequest(fmt.Sprintf(`{"index": {"refresh_interval": "%s"}}`, refreshInterval), options); err != nil {
+			if _, err := indexSettingsRequest(fmt.Sprintf(`{"index": {"refresh_interval": "%s"}}`, *refreshInterval), options); err != nil {
 				log.Fatal(err)
 			}
 			// Reset number of replicas.
 			if _, err := indexSettingsRequest(fmt.Sprintf(`{"index": {"number_of_replicas": %q}}`, numberOfReplicas), options); err != nil {
 				log.Fatal(err)
 			}
-
 			// Persist documents.
 			if err := esbulk.FlushIndex(i, options); err != nil {
 				log.Fatal(err)
