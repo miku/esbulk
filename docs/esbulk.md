@@ -35,6 +35,9 @@ OPTIONS
 `-mapping` *filename*
   Mapping string or filename to apply before indexing.
 
+`-p` *name*
+  Pipeline to use to preprocess documents.
+
 `-purge`
   Purge any existing index before reindexing. Warning: No confirmation required.
 
