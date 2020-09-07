@@ -252,6 +252,9 @@ Contributors
 * [sakshambathla](https://github.com/sakshambathla)
 * [mumoshu](https://github.com/mumoshu)
 * [albertpastrana](https://github.com/albertpastrana)
+* [faultlin3](https://github.com/faultlin3)
+
+and other.
 
 Measurements
 ------------
