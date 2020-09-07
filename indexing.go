@@ -29,6 +29,7 @@ type Options struct {
 	Scheme    string // http or https; deprecated, use: Servers.
 	Username  string
 	Password  string
+	Pipeline  string
 }
 
 // Item represents a bulk action.
@@ -87,7 +88,12 @@ func BulkIndex(docs []string, options Options) error {
 
 	rand.Seed(time.Now().Unix())
 	server := options.Servers[rand.Intn(len(options.Servers))]
+
 	link := fmt.Sprintf("%s/_bulk", server)
+
+	if options.Pipeline != "" {
+		link = fmt.Sprintf("%s/_bulk?pipeline=%s", server, options.Pipeline)
+	}
 
 	var lines []string
 	for _, doc := range docs {

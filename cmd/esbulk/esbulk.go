@@ -39,6 +39,7 @@ var (
 	user            = flag.String("u", "", "http basic auth username:password, like curl -u")
 	zeroReplica     = flag.Bool("0", false, "set the number of replicas to 0 during indexing")
 	refreshInterval = flag.String("r", "1s", "Refresh interval after import")
+	pipeline        = flag.String("p", "", "pipeline to use to preprocess documents")
 )
 
 // indexSettingsRequest runs updates an index setting, given a body and
@@ -136,6 +137,7 @@ func main() {
 		IDField:   *idfield,
 		Username:  username,
 		Password:  password,
+		Pipeline:  *pipeline,
 	}
 
 	if *verbose {
