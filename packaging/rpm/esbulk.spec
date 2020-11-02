@@ -50,7 +50,7 @@ rm -rf %{_topdir}/BUILD/%{name}
 
 %changelog
 
-* Mon Oct 2 2020 Martin Czygan
+* Mon Oct 2 2020 gsocgsoc
 - 0.6.2 release
 - support for skipping broken json
 

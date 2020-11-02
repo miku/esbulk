@@ -33,7 +33,7 @@ var (
 	batchSize       = flag.Int("size", 1000, "bulk batch size")
 	numWorkers      = flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose         = flag.Bool("verbose", false, "output basic progress")
-	sjson	        = flag.Bool("sjson", false, "skip broken json")
+	skip-broken	= flag.Bool("skip-broken", false, "skip broken json")
 	gzipped         = flag.Bool("z", false, "unzip gz'd file on the fly")
 	mapping         = flag.String("mapping", "", "mapping string or filename to apply before indexing")
 	purge           = flag.Bool("purge", false, "purge any existing index before indexing")
@@ -45,22 +45,10 @@ var (
 )
 
 //isJSON checks if a string is valid json
-func isJSON(s string) bool {
-        var (
-                obj1  = []interface{}{}
-                obj2  = map[string]interface{}{}
-                valid bool
-        )
-
-        if json.Unmarshal([]byte(s), &obj1) == nil {
-                valid = true
-        }
-        if json.Unmarshal([]byte(s), &obj2) == nil {
-                valid = true
-        }
-        return valid
+func IsJSON(str string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(str), &js) == nil
 }
-
 
 // indexSettingsRequest runs updates an index setting, given a body and
 // options. Body consist of the JSON document, e.g. `{"index":
@@ -272,8 +260,8 @@ func main() {
 		if len(line) == 0 {
 			continue
 		}
-		if *sjson {
-                	if isJSON(line) == false {
+		if *skip-broken {
+			if !(IsJSON(line)) {
 				if *verbose {
                         		fmt.Printf("Skipped line [%s]\n", line)
 				}
