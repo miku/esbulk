@@ -1,6 +1,6 @@
 Summary:    Fast parallel bulk loading utility for elasticsearch.
 Name:       esbulk
-Version:    0.6.1
+Version:    0.6.2
 Release:    0
 License:    MIT
 BuildArch:  x86_64
@@ -49,6 +49,10 @@ rm -rf %{_topdir}/BUILD/%{name}
 /usr/local/share/man/man1/esbulk.1
 
 %changelog
+
+* Mon Oct 2 2020 Martin Czygan
+- 0.6.2 release
+- support for skipping broken json
 
 * Mon Sep 7 2020 Martin Czygan
 - 0.6.1 release

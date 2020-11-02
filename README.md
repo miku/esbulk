@@ -92,6 +92,8 @@ Usage
             elasticsearch server, this works with https as well
       -size int
             bulk batch size (default 1000)
+      -sjson 
+            skips broken json lines
       -type string
             elasticsearch doc type (default "default")
       -u string
