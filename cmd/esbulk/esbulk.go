@@ -15,13 +15,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+        "encoding/json"
 
 	"github.com/miku/esbulk"
 	"github.com/sethgrid/pester"
 )
 
 // Version of application.
-const Version = "0.6.1"
+const Version = "0.6.2"
 
 var (
 	version         = flag.Bool("v", false, "prints current program version")
@@ -32,6 +33,7 @@ var (
 	batchSize       = flag.Int("size", 1000, "bulk batch size")
 	numWorkers      = flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose         = flag.Bool("verbose", false, "output basic progress")
+	sjson	        = flag.Bool("sjson", false, "skip broken json")
 	gzipped         = flag.Bool("z", false, "unzip gz'd file on the fly")
 	mapping         = flag.String("mapping", "", "mapping string or filename to apply before indexing")
 	purge           = flag.Bool("purge", false, "purge any existing index before indexing")
@@ -41,6 +43,24 @@ var (
 	refreshInterval = flag.String("r", "1s", "Refresh interval after import")
 	pipeline        = flag.String("p", "", "pipeline to use to preprocess documents")
 )
+
+//isJSON checks if a string is valid json
+func isJSON(s string) bool {
+        var (
+                obj1  = []interface{}{}
+                obj2  = map[string]interface{}{}
+                valid bool
+        )
+
+        if json.Unmarshal([]byte(s), &obj1) == nil {
+                valid = true
+        }
+        if json.Unmarshal([]byte(s), &obj2) == nil {
+                valid = true
+        }
+        return valid
+}
+
 
 // indexSettingsRequest runs updates an index setting, given a body and
 // options. Body consist of the JSON document, e.g. `{"index":
@@ -252,6 +272,15 @@ func main() {
 		if len(line) == 0 {
 			continue
 		}
+		if *sjson {
+                	if isJSON(line) == false {
+				if *verbose {
+                        		fmt.Printf("Skipped line [%s]\n", line)
+				}
+                       		continue
+			}
+                }
+
 		queue <- line
 		counter++
 	}
