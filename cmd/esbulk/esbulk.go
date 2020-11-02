@@ -33,7 +33,7 @@ var (
 	batchSize       = flag.Int("size", 1000, "bulk batch size")
 	numWorkers      = flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose         = flag.Bool("verbose", false, "output basic progress")
-	skip-broken	= flag.Bool("skip-broken", false, "skip broken json")
+	skipbroken	= flag.Bool("skipbroken", false, "skip broken json")
 	gzipped         = flag.Bool("z", false, "unzip gz'd file on the fly")
 	mapping         = flag.String("mapping", "", "mapping string or filename to apply before indexing")
 	purge           = flag.Bool("purge", false, "purge any existing index before indexing")
@@ -260,7 +260,7 @@ func main() {
 		if len(line) == 0 {
 			continue
 		}
-		if *skip-broken {
+		if *skipbroken {
 			if !(IsJSON(line)) {
 				if *verbose {
                         		fmt.Printf("Skipped line [%s]\n", line)
