@@ -212,6 +212,68 @@ func TestMinimalConfig(t *testing.T) {
 	}
 }
 
+func TestGH32(t *testing.T) {
+	skipNoDocker(t)
+	ctx := context.Background()
+	c, err := startServer("elasticsearch:7.11.2", 39200)
+	if err != nil {
+		t.Fatalf("could not start test container: %v", err)
+	}
+	base := fmt.Sprintf("http://localhost:%d", 39200)
+	resp, err := http.Get(base)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	LogReader(t, resp.Body)
+	t.Logf("server should be up at %s", base)
+
+	f, err := os.Open("fixtures/v10k.jsonl")
+	if err != nil {
+		t.Errorf("could not open fixture: %v", err)
+	}
+	defer f.Close()
+
+	r := Runner{
+		Servers:         []string{"http://localhost:39200"},
+		BatchSize:       5000,
+		NumWorkers:      1,
+		RefreshInterval: "1s",
+		Mapping:         `{}`,
+		IndexName:       "abc",
+		DocType:         "any", // deprecated with ES7
+		File:            f,
+		Verbose:         true,
+	}
+	// This should fail with #32.
+	err = r.Run()
+	if err != nil {
+		t.Logf("expected err: %v", err)
+	} else {
+		t.Fatalf("expected fail, see #32")
+	}
+
+	// w/o doctype, we should be good
+	r = Runner{
+		Servers:         []string{"http://localhost:39200"},
+		BatchSize:       5000,
+		NumWorkers:      1,
+		RefreshInterval: "1s",
+		Mapping:         `{}`,
+		IndexName:       "abc",
+		File:            f,
+		Verbose:         true,
+	}
+	// This should fail with #32.
+	err = r.Run()
+	if err != nil {
+		t.Fatalf("unexpected failure: %v", err)
+	}
+	if err := c.Terminate(ctx); err != nil {
+		t.Errorf("could not kill container: %v", err)
+	}
+}
+
 type SearchResponse6 struct {
 	Hits struct {
 		Hits []struct {
