@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 )
 
 func TestIncompleteConfig(t *testing.T) {
+	ensureDocker(t)
 	var cases = []struct {
 		help string
 		r    Runner
@@ -92,9 +94,20 @@ func LogReader(t *testing.T, r io.Reader) []byte {
 	return b
 }
 
-func TestMinimalConfig(t *testing.T) {
-	ctx := context.Background()
+func ensureDocker(t *testing.T) {
+	cmd := exec.Command("systemctl", "is-active", "docker")
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Skipf("docker check failed: %v", err)
+	}
+	if strings.TrimSpace(string(b)) != "active" {
+		t.Skipf("docker not installed or not running")
+	}
+}
 
+func TestMinimalConfig(t *testing.T) {
+	ensureDocker(t)
+	ctx := context.Background()
 	var imageConf = []struct {
 		Image    string
 		HttpPort int
