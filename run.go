@@ -19,8 +19,11 @@ import (
 	"github.com/sethgrid/pester"
 )
 
-var Version = "dev"
+// Version of application.
+var Version = "dev" // next: 0.6.3
 
+// Runner bundles various options. Factored out of a former main func and
+// should be further split up (TODO).
 type Runner struct {
 	BatchSize       int
 	CpuProfile      string
@@ -45,6 +48,7 @@ type Runner struct {
 	ZeroReplica     bool
 }
 
+// Run starts indexing documents from file into a given index.
 func (r *Runner) Run() (err error) {
 	if r.ShowVersion {
 		fmt.Println(Version)

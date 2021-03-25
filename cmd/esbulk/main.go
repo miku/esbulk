@@ -1,23 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
-	"math/rand"
-	"net/http"
 	"os"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/miku/esbulk"
-	"github.com/sethgrid/pester"
 )
-
-// Version of application.
-const Version = "0.6.2"
 
 var (
 	version         = flag.Bool("v", false, "prints current program version")
@@ -39,42 +30,6 @@ var (
 	pipeline        = flag.String("p", "", "pipeline to use to preprocess documents")
 	serverFlags     esbulk.ArrayFlags
 )
-
-// IsJSON checks if a string is valid json.
-func IsJSON(str string) bool {
-	var js json.RawMessage
-	return json.Unmarshal([]byte(str), &js) == nil
-}
-
-// indexSettingsRequest runs updates an index setting, given a body and
-// options. Body consist of the JSON document, e.g. `{"index":
-// {"refresh_interval": "1s"}}`.
-func indexSettingsRequest(body string, options esbulk.Options) (*http.Response, error) {
-	r := strings.NewReader(body)
-
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
-	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
-
-	req, err := http.NewRequest("PUT", link, r)
-	if err != nil {
-		return nil, err
-	}
-	// Auth handling.
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := pester.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if options.Verbose {
-		log.Printf("applied setting: %s with status %s\n", body, resp.Status)
-	}
-	return resp, nil
-}
 
 func main() {
 	flag.Var(&serverFlags, "server", "elasticsearch server, this works with https as well")
