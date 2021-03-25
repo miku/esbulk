@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/testcontainers/testcontainers-go"
@@ -48,13 +49,19 @@ func TestIncompleteConfig(t *testing.T) {
 	}
 }
 
-func startServer(httpPort, nodesPort int) (testcontainers.Container, error) {
+// startServer starts an elasticsearch server from image, exposing given ports.
+func startServer(httpPort, nodesPort int, image string) (testcontainers.Container, error) {
 	ctx := context.Background()
 	hp := fmt.Sprintf("%d:9200/tcp", httpPort)
 	np := fmt.Sprintf("%d:9300/tcp", nodesPort)
+	parts := strings.Split(image, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("expected image:tag name")
+	}
+	name := fmt.Sprintf("esbulk-test-es-%s", parts[1])
 	req := testcontainers.ContainerRequest{
-		Image: "elasticsearch:7.1.0",
-		Name:  "esbulk-test-es-7.1.0",
+		Image: image,
+		Name:  name,
 		Env: map[string]string{
 			"discovery.type": "single-node",
 		},
@@ -71,55 +78,26 @@ func startServer(httpPort, nodesPort int) (testcontainers.Container, error) {
 
 func TestMinimalConfig(t *testing.T) {
 	ctx := context.Background()
-	c, err := startServer(39200, 39300)
-	if err != nil {
-		t.Fatalf("could not start test container: %v", err)
-	}
-	defer c.Terminate(ctx)
 
-	resp, err := http.Get("http://localhost:39200")
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read body: %v", err)
-	}
-	t.Logf("%s", string(b))
-	t.Log("server should be up at http://localhost:39200 or http://localhost:39300")
-
-	var cases = []struct {
-		filename  string
-		indexName string
-		numDocs   int64
-		err       error
+	var imageConf = []struct {
+		HttpPort  int
+		NodesPort int
+		Image     string
 	}{
-		{"fixtures/v10k.jsonl", "abc", 10000, nil},
+		{39200, 39300, "elasticsearch:7.11.2"},
+		{39200, 39300, "elasticsearch:6.8.14"},
+		{39200, 39300, "elasticsearch:5.6.16"},
 	}
-	for _, c := range cases {
-		f, err := os.Open(c.filename)
+
+	for _, conf := range imageConf {
+		c, err := startServer(conf.HttpPort, conf.NodesPort, conf.Image)
 		if err != nil {
-			t.Errorf("could not open fixture: %s", c.filename)
+			t.Fatalf("could not start test container: %v", err)
 		}
-		defer f.Close()
-		r := Runner{
-			Servers:         []string{"http://localhost:39200"},
-			BatchSize:       2500,
-			NumWorkers:      1,
-			RefreshInterval: "1s",
-			IndexName:       "abc",
-			DocType:         "x",
-			File:            f,
-			Verbose:         true,
-		}
-		err = r.Run()
-		if err != c.err {
-			t.Fatalf("got %v, want %v", err, c.err)
-		}
-		resp, err = http.Get("http://localhost:39200/abc/_search")
+
+		resp, err := http.Get("http://localhost:39200")
 		if err != nil {
-			t.Errorf("could not query es: %v", err)
+			t.Fatalf("request failed: %v", err)
 		}
 		defer resp.Body.Close()
 		b, err := ioutil.ReadAll(resp.Body)
@@ -127,17 +105,92 @@ func TestMinimalConfig(t *testing.T) {
 			t.Fatalf("failed to read body: %v", err)
 		}
 		t.Logf("%s", string(b))
-		var sr SearchResponse
-		if err := json.Unmarshal(b, &sr); err != nil {
-			t.Errorf("could not parse json response: %v", err)
+		t.Log("server should be up at http://localhost:39200 or http://localhost:39300")
+
+		var cases = []struct {
+			filename  string
+			indexName string
+			numDocs   int64
+			err       error
+		}{
+			{"fixtures/v10k.jsonl", "abc", 10000, nil},
 		}
-		if sr.Hits.Total.Value != c.numDocs {
-			t.Errorf("indexed %d, want %d", sr.Hits.Total.Value, c.numDocs)
+		for _, c := range cases {
+			f, err := os.Open(c.filename)
+			if err != nil {
+				t.Errorf("could not open fixture: %s", c.filename)
+			}
+			defer f.Close()
+			r := Runner{
+				Servers:         []string{"http://localhost:39200"},
+				BatchSize:       2500,
+				NumWorkers:      1,
+				RefreshInterval: "1s",
+				IndexName:       "abc",
+				DocType:         "x",
+				File:            f,
+				Verbose:         true,
+			}
+			err = r.Run()
+			if err != c.err {
+				t.Fatalf("got %v, want %v", err, c.err)
+			}
+			resp, err = http.Get("http://localhost:39200/abc/_search")
+			if err != nil {
+				t.Errorf("could not query es: %v", err)
+			}
+			defer resp.Body.Close()
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("failed to read body: %v", err)
+			}
+			t.Logf("%s", string(b))
+			var (
+				sr7 SearchResponse7
+				sr6 SearchResponse6
+			)
+			if err = json.Unmarshal(b, &sr7); err != nil {
+				if err = json.Unmarshal(b, &sr6); err != nil {
+					t.Errorf("could not parse json response (6, 7): %v", err)
+				} else {
+					t.Log("es6 detected")
+				}
+			}
+			if sr7.Hits.Total.Value != c.numDocs && sr6.Hits.Total != c.numDocs {
+				t.Errorf("expected %d docs", c.numDocs)
+			}
+		}
+		if err := c.Terminate(ctx); err != nil {
+			t.Errorf("could not kill container: %v", err)
 		}
 	}
 }
 
-type SearchResponse struct {
+type SearchResponse6 struct {
+	Hits struct {
+		Hits []struct {
+			Id     string  `json:"_id"`
+			Index  string  `json:"_index"`
+			Score  float64 `json:"_score"`
+			Source struct {
+				V string `json:"v"`
+			} `json:"_source"`
+			Type string `json:"_type"`
+		} `json:"hits"`
+		MaxScore float64 `json:"max_score"`
+		Total    int64   `json:"total"`
+	} `json:"hits"`
+	Shards struct {
+		Failed     int64 `json:"failed"`
+		Skipped    int64 `json:"skipped"`
+		Successful int64 `json:"successful"`
+		Total      int64 `json:"total"`
+	} `json:"_shards"`
+	TimedOut bool  `json:"timed_out"`
+	Took     int64 `json:"took"`
+}
+
+type SearchResponse7 struct {
 	Hits struct {
 		Hits []struct {
 			Id     string  `json:"_id"`
