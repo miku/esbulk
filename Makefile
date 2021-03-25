@@ -33,7 +33,7 @@ cover:
 	go tool cover -html=coverage.out
 
 esbulk:
-	CGO_ENABLED=0 go build cmd/esbulk/esbulk.go
+	CGO_ENABLED=0 go build -o esbulk cmd/esbulk/main.go
 
 # ==== packaging
 
