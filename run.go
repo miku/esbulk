@@ -208,7 +208,7 @@ func (r *Runner) Run() (err error) {
 			continue
 		}
 		if r.SkipBroken {
-			if !(IsJSON(line)) {
+			if !(isJSON(line)) {
 				if r.Verbose {
 					fmt.Printf("skipped line [%s]\n", line)
 				}
@@ -270,8 +270,8 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 	return resp, nil
 }
 
-// IsJSON checks if a string is valid json.
-func IsJSON(str string) bool {
+// isJSON checks if a string is valid json.
+func isJSON(str string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(str), &js) == nil
 }

@@ -100,8 +100,12 @@ func BulkIndex(docs []string, options Options) error {
 		if len(strings.TrimSpace(doc)) == 0 {
 			continue
 		}
-
-		header := fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
+		var header string
+		if options.DocType == "" {
+			header = fmt.Sprintf(`{"index": {"_index": "%s"}}`, options.Index)
+		} else {
+			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
+		}
 
 		// If an "-id" is given, peek into the document to extract the ID and
 		// use it in the header.
@@ -147,8 +151,12 @@ func BulkIndex(docs []string, options Options) error {
 				}
 			}
 
-			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": %q}}`,
-				options.Index, options.DocType, idstr)
+			if options.DocType == "" {
+				header = fmt.Sprintf(`{"index": {"_index": "%s", "_id": %q}}`, options.Index, idstr)
+			} else {
+				header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": %q}}`,
+					options.Index, options.DocType, idstr)
+			}
 
 			// Remove the IDField if it is accidentally named '_id', since
 			// Field [_id] is a metadata field and cannot be added inside a

@@ -6,19 +6,21 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestIncompleteConfig(t *testing.T) {
-	ensureDocker(t)
+	skipNoDocker(t)
 	var cases = []struct {
 		help string
 		r    Runner
@@ -81,7 +83,6 @@ func startServer(image string, httpPort int) (testcontainers.Container, error) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-	// XXX: log from container to some file, logs/tc-1616683025.log ...
 }
 
 func LogReader(t *testing.T, r io.Reader) []byte {
@@ -94,11 +95,11 @@ func LogReader(t *testing.T, r io.Reader) []byte {
 	return b
 }
 
-func ensureDocker(t *testing.T) {
+func skipNoDocker(t *testing.T) {
 	cmd := exec.Command("systemctl", "is-active", "docker")
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Skipf("docker check failed: %v", err)
+		t.Skipf("docker seems inactive or not installed: %v", err)
 	}
 	if strings.TrimSpace(string(b)) != "active" {
 		t.Skipf("docker not installed or not running")
@@ -106,7 +107,7 @@ func ensureDocker(t *testing.T) {
 }
 
 func TestMinimalConfig(t *testing.T) {
-	ensureDocker(t)
+	skipNoDocker(t)
 	ctx := context.Background()
 	var imageConf = []struct {
 		Image    string
@@ -151,7 +152,7 @@ func TestMinimalConfig(t *testing.T) {
 				NumWorkers:      1,
 				RefreshInterval: "1s",
 				IndexName:       "abc",
-				DocType:         "x",
+				DocType:         "any", // deprecated with ES7
 				File:            f,
 				Verbose:         true,
 			}
@@ -180,6 +181,30 @@ func TestMinimalConfig(t *testing.T) {
 			if sr7.Hits.Total.Value != c.numDocs && sr6.Hits.Total != c.numDocs {
 				t.Errorf("expected %d docs", c.numDocs)
 			}
+		}
+		// Save logs.
+		rc, err := c.Logs(ctx)
+		if err != nil {
+			log.Printf("logs not available: %v", err)
+		}
+		if err := os.MkdirAll("logs", 0755); err != nil {
+			if !os.IsExist(err) {
+				log.Printf("create dir failed: %v", err)
+			}
+		}
+		cname, err := c.Name(ctx)
+		if err != nil {
+			t.Logf("failed to get container name: %v", err)
+		}
+		fn := fmt.Sprintf("logs/%s-%s.log", time.Now().Format("20060102150405"), strings.TrimLeft(cname, "/"))
+		f, err := os.Create(fn)
+		if err != nil {
+			log.Printf("failed to create log file: %v", err)
+		}
+		defer f.Close()
+		log.Printf("logging to %s", fn)
+		if _, err := io.Copy(f, rc); err != nil {
+			log.Printf("log failed: %v", err)
 		}
 		if err := c.Terminate(ctx); err != nil {
 			t.Errorf("could not kill container: %v", err)

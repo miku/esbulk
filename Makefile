@@ -26,6 +26,7 @@ clean:
 	rm -f packaging/debian/esbulk_*.deb
 	rm -f esbulk_*.deb
 	rm -rf packaging/debian/esbulk/usr
+	rm -rf logs/
 
 cover:
 	go get -d && go test -v	-coverprofile=coverage.out

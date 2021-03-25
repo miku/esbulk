@@ -35,3 +35,4 @@ esbulk_*deb
 Vagrantfile
 TODO.md
 /tmp
+/logs

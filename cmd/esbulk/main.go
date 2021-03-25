@@ -15,7 +15,7 @@ var (
 	cpuprofile      = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile      = flag.String("memprofile", "", "write heap profile to file")
 	indexName       = flag.String("index", "", "index name")
-	docType         = flag.String("type", "default", "elasticsearch doc type")
+	docType         = flag.String("type", "", "elasticsearch doc type (deprecated since ES7)")
 	batchSize       = flag.Int("size", 1000, "bulk batch size")
 	numWorkers      = flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose         = flag.Bool("verbose", false, "output basic progress")
