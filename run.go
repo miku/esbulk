@@ -193,7 +193,7 @@ func (r *Runner) Run() (err error) {
 		}
 		reader = bufio.NewReader(zreader)
 	}
-	if r.Verbose {
+	if r.Verbose && r.File != nil {
 		log.Printf("start reading from %v", r.File.Name())
 	}
 	for {
