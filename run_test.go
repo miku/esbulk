@@ -245,7 +245,8 @@ func TestGH32(t *testing.T) {
 		File:            f,
 		Verbose:         true,
 	}
-	// This should fail with #32.
+
+	// this should fail with #32
 	err = r.Run()
 	if err != nil {
 		t.Logf("expected err: %v", err)
@@ -264,7 +265,6 @@ func TestGH32(t *testing.T) {
 		File:            f,
 		Verbose:         true,
 	}
-	// This should fail with #32.
 	err = r.Run()
 	if err != nil {
 		t.Fatalf("unexpected failure: %v", err)
