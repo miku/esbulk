@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,8 +20,13 @@ import (
 	"github.com/sethgrid/pester"
 )
 
-// Version of application.
-var Version = "dev" // next: 0.6.3
+var (
+	// Version of application.
+	Version = "dev" // next: 0.6.3
+
+	ErrIndexNameRequired = errors.New("index name required")
+	ErrNoWorkers         = errors.New("no workers configured")
+)
 
 // Runner bundles various options. Factored out of a former main func and
 // should be further split up (TODO).
@@ -54,6 +60,12 @@ func (r *Runner) Run() (err error) {
 		fmt.Println(Version)
 		return nil
 	}
+	if r.NumWorkers == 0 {
+		return ErrNoWorkers
+	}
+	if r.BatchSize == 0 {
+		return fmt.Errorf("cannot use zero batch size")
+	}
 	if r.CpuProfile != "" {
 		f, err := os.Create(r.CpuProfile)
 		if err != nil {
@@ -63,7 +75,7 @@ func (r *Runner) Run() (err error) {
 		defer pprof.StopCPUProfile()
 	}
 	if r.IndexName == "" {
-		return fmt.Errorf("index name required")
+		return ErrIndexNameRequired
 	}
 	if len(r.Servers) == 0 {
 		r.Servers = append(r.Servers, "http://localhost:9200")
@@ -119,6 +131,9 @@ func (r *Runner) Run() (err error) {
 	for i := 0; i < r.NumWorkers; i++ {
 		name := fmt.Sprintf("worker-%d", i)
 		go Worker(name, options, queue, &wg)
+	}
+	if r.Verbose {
+		log.Printf("started %d workers", r.NumWorkers)
 	}
 	for i, _ := range options.Servers {
 		// Store number_of_replicas settings for restoration later.
@@ -178,6 +193,9 @@ func (r *Runner) Run() (err error) {
 		}
 		reader = bufio.NewReader(zreader)
 	}
+	if r.Verbose {
+		log.Printf("start reading from %v", r.File.Name())
+	}
 	for {
 		line, err := reader.ReadString('\n')
 		if err == io.EOF {
@@ -212,8 +230,12 @@ func (r *Runner) Run() (err error) {
 		f.Close()
 	}
 	if r.Verbose {
-		rate := float64(counter) / elapsed.Seconds()
-		log.Printf("%d docs in %s at %0.3f docs/s with %d workers\n", counter, elapsed, rate, r.NumWorkers)
+		elapsed := elapsed.Seconds()
+		if elapsed < 0.1 {
+			elapsed = 0.1
+		}
+		rate := float64(counter) / elapsed
+		log.Printf("%d docs in %0.2fs at %0.3f docs/s with %d workers\n", counter, elapsed, rate, r.NumWorkers)
 	}
 	return nil
 }

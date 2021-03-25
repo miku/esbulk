@@ -1,0 +1,165 @@
+package esbulk
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"os"
+	"testing"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+)
+
+func TestIncompleteConfig(t *testing.T) {
+	var cases = []struct {
+		help string
+		r    Runner
+		err  error
+	}{
+		{help: "no default index name", r: Runner{}, err: ErrNoWorkers},
+		{help: "no such host", r: Runner{
+			IndexName:  "abc",
+			BatchSize:  10,
+			NumWorkers: 1,
+			Servers:    []string{"http://broken.server:9200"},
+		}, err: &url.Error{Op: "Get", URL: "http://broken.server:9200/abc"}},
+	}
+	for _, c := range cases {
+		err := c.r.Run()
+		switch err.(type) {
+		case nil:
+			if c.err != nil {
+				t.Fatalf("got: %#v, %T, want: %v [%s]", err, err, c.err, c.help)
+			}
+		case *url.Error:
+			// For now, only check whether we expect an error.
+			if c.err == nil {
+				t.Fatalf("got: %#v, %T, want: %v [%s]", err, err, c.err, c.help)
+			}
+		default:
+			if err != c.err {
+				t.Fatalf("got: %#v, %T, want: %v [%s]", err, err, c.err, c.help)
+			}
+		}
+	}
+}
+
+func startServer(httpPort, nodesPort int) (testcontainers.Container, error) {
+	ctx := context.Background()
+	hp := fmt.Sprintf("%d:9200/tcp", httpPort)
+	np := fmt.Sprintf("%d:9300/tcp", nodesPort)
+	req := testcontainers.ContainerRequest{
+		Image: "elasticsearch:7.1.0",
+		Name:  "esbulk-test-es-7.1.0",
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		ExposedPorts: []string{hp, np},
+		WaitingFor:   wait.ForLog("started"),
+	}
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	// XXX: log from container to some file, logs/tc-1616683025.log ...
+	return c, err
+}
+
+func TestMinimalConfig(t *testing.T) {
+	ctx := context.Background()
+	c, err := startServer(39200, 39300)
+	if err != nil {
+		t.Fatalf("could not start test container: %v", err)
+	}
+	defer c.Terminate(ctx)
+
+	resp, err := http.Get("http://localhost:39200")
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read body: %v", err)
+	}
+	t.Logf("%s", string(b))
+	t.Log("server should be up at http://localhost:39200 or http://localhost:39300")
+
+	var cases = []struct {
+		filename  string
+		indexName string
+		numDocs   int64
+		err       error
+	}{
+		{"fixtures/v10k.jsonl", "abc", 10000, nil},
+	}
+	for _, c := range cases {
+		f, err := os.Open(c.filename)
+		if err != nil {
+			t.Errorf("could not open fixture: %s", c.filename)
+		}
+		defer f.Close()
+		r := Runner{
+			Servers:         []string{"http://localhost:39200"},
+			BatchSize:       2500,
+			NumWorkers:      1,
+			RefreshInterval: "1s",
+			IndexName:       "abc",
+			DocType:         "x",
+			File:            f,
+			Verbose:         true,
+		}
+		err = r.Run()
+		if err != c.err {
+			t.Fatalf("got %v, want %v", err, c.err)
+		}
+		resp, err = http.Get("http://localhost:39200/abc/_search")
+		if err != nil {
+			t.Errorf("could not query es: %v", err)
+		}
+		defer resp.Body.Close()
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read body: %v", err)
+		}
+		t.Logf("%s", string(b))
+		var sr SearchResponse
+		if err := json.Unmarshal(b, &sr); err != nil {
+			t.Errorf("could not parse json response: %v", err)
+		}
+		if sr.Hits.Total.Value != c.numDocs {
+			t.Errorf("indexed %d, want %d", sr.Hits.Total.Value, c.numDocs)
+		}
+	}
+}
+
+type SearchResponse struct {
+	Hits struct {
+		Hits []struct {
+			Id     string  `json:"_id"`
+			Index  string  `json:"_index"`
+			Score  float64 `json:"_score"`
+			Source struct {
+				V string `json:"v"`
+			} `json:"_source"`
+			Type string `json:"_type"`
+		} `json:"hits"`
+		MaxScore float64 `json:"max_score"`
+		Total    struct {
+			Relation string `json:"relation"`
+			Value    int64  `json:"value"`
+		} `json:"total"`
+	} `json:"hits"`
+	Shards struct {
+		Failed     int64 `json:"failed"`
+		Skipped    int64 `json:"skipped"`
+		Successful int64 `json:"successful"`
+		Total      int64 `json:"total"`
+	} `json:"_shards"`
+	TimedOut bool  `json:"timed_out"`
+	Took     int64 `json:"took"`
+}
