@@ -1,5 +1,6 @@
-TARGETS = esbulk
-VERSION = 0.6.2
+SHELL := /bin/bash
+TARGETS := esbulk
+VERSION := 0.6.2
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
 test:
@@ -12,7 +13,7 @@ fmt:
 	go fmt ./...
 
 all: fmt test
-	go build
+	go build -o esbulk cmd/esbulk/main.go
 
 install:
 	go install
