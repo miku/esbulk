@@ -67,6 +67,7 @@ $ docker run -it --rm tirtir/esbulk -v
 0.5.2
 ```
 
+On Docker Hub: [tirtir/esbulk](https://hub.docker.com/repository/docker/tirtir/esbulk/tags?page=1&ordering=last_updated).
 
 Usage
 -----
