@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -49,63 +50,73 @@ func TestIncompleteConfig(t *testing.T) {
 	}
 }
 
-// startServer starts an elasticsearch server from image, exposing given ports.
-func startServer(httpPort, nodesPort int, image string) (testcontainers.Container, error) {
-	ctx := context.Background()
-	hp := fmt.Sprintf("%d:9200/tcp", httpPort)
-	np := fmt.Sprintf("%d:9300/tcp", nodesPort)
-	parts := strings.Split(image, ":")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("expected image:tag name")
+// startServer starts an elasticsearch server from image, exposing the http port.
+func startServer(image string, httpPort int) (testcontainers.Container, error) {
+	var (
+		ctx   = context.Background()
+		hp    = fmt.Sprintf("%d:9200/tcp", httpPort)
+		parts = strings.Split(image, ":")
+		tag   string
+	)
+	if len(parts) == 2 {
+		tag = parts[1]
+	} else {
+		tag = "latest"
 	}
-	name := fmt.Sprintf("esbulk-test-es-%s", parts[1])
-	req := testcontainers.ContainerRequest{
-		Image: image,
-		Name:  name,
-		Env: map[string]string{
-			"discovery.type": "single-node",
-		},
-		ExposedPorts: []string{hp, np},
-		WaitingFor:   wait.ForLog("started"),
-	}
-	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	var (
+		name = fmt.Sprintf("esbulk-test-es-%s", tag)
+		req  = testcontainers.ContainerRequest{
+			Image: image,
+			Name:  name,
+			Env: map[string]string{
+				"discovery.type": "single-node",
+			},
+			ExposedPorts: []string{hp},
+			WaitingFor:   wait.ForLog("started"),
+		}
+	)
+	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
 	// XXX: log from container to some file, logs/tc-1616683025.log ...
-	return c, err
+}
+
+func LogReader(t *testing.T, r io.Reader) []byte {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read failed: %s", err)
+		return nil
+	}
+	t.Logf("%s", string(b))
+	return b
 }
 
 func TestMinimalConfig(t *testing.T) {
 	ctx := context.Background()
 
 	var imageConf = []struct {
-		HttpPort  int
-		NodesPort int
-		Image     string
+		Image    string
+		HttpPort int
 	}{
-		{39200, 39300, "elasticsearch:7.11.2"},
-		{39200, 39300, "elasticsearch:6.8.14"},
-		{39200, 39300, "elasticsearch:5.6.16"},
+		{"elasticsearch:7.11.2", 39200},
+		{"elasticsearch:6.8.14", 39200},
+		{"elasticsearch:5.6.16", 39200},
 	}
 
 	for _, conf := range imageConf {
-		c, err := startServer(conf.HttpPort, conf.NodesPort, conf.Image)
+		c, err := startServer(conf.Image, conf.HttpPort)
 		if err != nil {
 			t.Fatalf("could not start test container: %v", err)
 		}
-
-		resp, err := http.Get("http://localhost:39200")
+		base := fmt.Sprintf("http://localhost:%d", conf.HttpPort)
+		resp, err := http.Get(base)
 		if err != nil {
 			t.Fatalf("request failed: %v", err)
 		}
 		defer resp.Body.Close()
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("failed to read body: %v", err)
-		}
-		t.Logf("%s", string(b))
-		t.Log("server should be up at http://localhost:39200 or http://localhost:39300")
+		LogReader(t, resp.Body)
+		t.Logf("server should be up at %s", base)
 
 		var cases = []struct {
 			filename  string
@@ -123,7 +134,7 @@ func TestMinimalConfig(t *testing.T) {
 			defer f.Close()
 			r := Runner{
 				Servers:         []string{"http://localhost:39200"},
-				BatchSize:       2500,
+				BatchSize:       5000,
 				NumWorkers:      1,
 				RefreshInterval: "1s",
 				IndexName:       "abc",
@@ -135,16 +146,13 @@ func TestMinimalConfig(t *testing.T) {
 			if err != c.err {
 				t.Fatalf("got %v, want %v", err, c.err)
 			}
-			resp, err = http.Get("http://localhost:39200/abc/_search")
+			searchURL := fmt.Sprintf("%s/%s/_search", base, r.IndexName)
+			resp, err = http.Get(searchURL)
 			if err != nil {
 				t.Errorf("could not query es: %v", err)
 			}
 			defer resp.Body.Close()
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				t.Fatalf("failed to read body: %v", err)
-			}
-			t.Logf("%s", string(b))
+			b := LogReader(t, resp.Body)
 			var (
 				sr7 SearchResponse7
 				sr6 SearchResponse6
