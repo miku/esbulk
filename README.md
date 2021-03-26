@@ -85,6 +85,10 @@ Usage
             mapping string or filename to apply before indexing
       -memprofile string
             write heap profile to file
+      -optype string
+            optype (index - will replace existing data, create - will only create a new doc, update - create new or update existing data) (default "index")
+      -p string
+            pipeline to use to preprocess documents
       -purge
             purge any existing index before indexing
       -r string
@@ -94,20 +98,17 @@ Usage
       -size int
             bulk batch size (default 1000)
       -skipbroken
-            skips broken json lines
+            skip broken json
       -type string
-            elasticsearch doc type (default "default")
+            elasticsearch doc type (deprecated since ES7)
       -u string
             http basic auth username:password, like curl -u
       -v    prints current program version
       -verbose
             output basic progress
       -w int
-            number of workers to use (default 4)
+            number of workers to use (default 8)
       -z    unzip gz'd file on the fly
-      -p string
-            pipeline to use to preprocess documents
-
 
 ![](https://raw.githubusercontent.com/miku/esbulk/master/docs/asciicast.gif)
 
@@ -256,6 +257,10 @@ Contributors
 * [mumoshu](https://github.com/mumoshu)
 * [albertpastrana](https://github.com/albertpastrana)
 * [faultlin3](https://github.com/faultlin3)
+* [gransy](https://github.com/gransy)
+* [Christoph Kepper](https://github.com/ckepper)
+* Christian Solomon
+* Mikael Byström
 
 and other.
 
