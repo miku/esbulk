@@ -33,6 +33,7 @@ var (
 type Runner struct {
 	BatchSize       int
 	CpuProfile      string
+	OpType		string
 	DocType         string
 	File            *os.File
 	FileGzipped     bool
@@ -77,6 +78,9 @@ func (r *Runner) Run() (err error) {
 	if r.IndexName == "" {
 		return ErrIndexNameRequired
 	}
+	if r.OpType == "" {
+		r.OpType = "index"
+	}
 	if len(r.Servers) == 0 {
 		r.Servers = append(r.Servers, "http://localhost:9200")
 	}
@@ -86,6 +90,7 @@ func (r *Runner) Run() (err error) {
 	options := Options{
 		Servers:   r.Servers,
 		Index:     r.IndexName,
+		OpType:	   r.OpType,
 		DocType:   r.DocType,
 		BatchSize: r.BatchSize,
 		Verbose:   r.Verbose,

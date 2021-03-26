@@ -15,6 +15,7 @@ var (
 	cpuprofile      = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile      = flag.String("memprofile", "", "write heap profile to file")
 	indexName       = flag.String("index", "", "index name")
+	opType          = flag.String("optype", "index", "optype (index - will replace existing data, create - will only create a new doc, update - create new or update existing data)")
 	docType         = flag.String("type", "", "elasticsearch doc type (deprecated since ES7)")
 	batchSize       = flag.Int("size", 1000, "bulk batch size")
 	numWorkers      = flag.Int("w", runtime.NumCPU(), "number of workers to use")
@@ -65,6 +66,7 @@ func main() {
 		Mapping:         *mapping,
 		MemProfile:      *memprofile,
 		NumWorkers:      *numWorkers,
+		OpType:		 *opType,
 		Password:        password,
 		Pipeline:        *pipeline,
 		Purge:           *purge,

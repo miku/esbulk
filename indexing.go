@@ -22,6 +22,7 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 type Options struct {
 	Servers   []string
 	Index     string
+	OpType	  string
 	DocType   string
 	BatchSize int
 	Verbose   bool
@@ -102,9 +103,9 @@ func BulkIndex(docs []string, options Options) error {
 		}
 		var header string
 		if options.DocType == "" {
-			header = fmt.Sprintf(`{"index": {"_index": "%s"}}`, options.Index)
+			header = fmt.Sprintf(`{"%s": {"_index": "%s"}}`, options.OpType, options.Index)
 		} else {
-			header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s"}}`, options.Index, options.DocType)
+			header = fmt.Sprintf(`{"%s": {"_index": "%s", "_type": "%s"}}`, options.OpType, options.Index, options.DocType)
 		}
 
 		// If an "-id" is given, peek into the document to extract the ID and
@@ -152,10 +153,10 @@ func BulkIndex(docs []string, options Options) error {
 			}
 
 			if options.DocType == "" {
-				header = fmt.Sprintf(`{"index": {"_index": "%s", "_id": %q}}`, options.Index, idstr)
+				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_id": %q}}`, options.OpType, options.Index, idstr)
 			} else {
-				header = fmt.Sprintf(`{"index": {"_index": "%s", "_type": "%s", "_id": %q}}`,
-					options.Index, options.DocType, idstr)
+				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_type": "%s", "_id": %q}}`,
+					options.OpType, options.Index, options.DocType, idstr)
 			}
 
 			// Remove the IDField if it is accidentally named '_id', since
@@ -177,6 +178,11 @@ func BulkIndex(docs []string, options Options) error {
 				doc = string(b)
 			}
 		}
+
+		if options.OpType=="update" {
+		    doc = fmt.Sprintf(`{"doc": %s, "doc_as_upsert" : true}`, doc)
+		}
+
 		lines = append(lines, header, doc)
 	}
 
