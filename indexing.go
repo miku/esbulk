@@ -22,7 +22,7 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 type Options struct {
 	Servers   []string
 	Index     string
-	OpType	  string
+	OpType    string
 	DocType   string
 	BatchSize int
 	Verbose   bool
@@ -179,8 +179,8 @@ func BulkIndex(docs []string, options Options) error {
 			}
 		}
 
-		if options.OpType=="update" {
-		    doc = fmt.Sprintf(`{"doc": %s, "doc_as_upsert" : true}`, doc)
+		if options.OpType == "update" {
+			doc = fmt.Sprintf(`{"doc": %s, "doc_as_upsert" : true}`, doc)
 		}
 
 		lines = append(lines, header, doc)
