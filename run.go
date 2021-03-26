@@ -22,7 +22,7 @@ import (
 
 var (
 	// Version of application.
-	Version = "0.7.1"
+	Version = "0.7.2"
 
 	ErrIndexNameRequired = errors.New("index name required")
 	ErrNoWorkers         = errors.New("no workers configured")
@@ -33,7 +33,7 @@ var (
 type Runner struct {
 	BatchSize       int
 	CpuProfile      string
-	OpType		string
+	OpType          string
 	DocType         string
 	File            *os.File
 	FileGzipped     bool
@@ -90,7 +90,7 @@ func (r *Runner) Run() (err error) {
 	options := Options{
 		Servers:   r.Servers,
 		Index:     r.IndexName,
-		OpType:	   r.OpType,
+		OpType:    r.OpType,
 		DocType:   r.DocType,
 		BatchSize: r.BatchSize,
 		Verbose:   r.Verbose,

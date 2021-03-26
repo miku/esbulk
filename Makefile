@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 TARGETS := esbulk
-VERSION := 0.7.1
+VERSION := 0.7.2
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
 test:
