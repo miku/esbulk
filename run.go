@@ -45,6 +45,7 @@ type Runner struct {
 	Password        string
 	Pipeline        string
 	Purge           bool
+	PurgePause      time.Duration
 	RefreshInterval string
 	Scheme          string
 	Servers         []string
@@ -107,7 +108,7 @@ func (r *Runner) Run() (err error) {
 		if err := DeleteIndex(options); err != nil {
 			return err
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(r.PurgePause)
 	}
 	if err := CreateIndex(options); err != nil {
 		return err
