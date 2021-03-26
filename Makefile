@@ -1,4 +1,3 @@
-SHELL := /bin/bash
 TARGETS := esbulk
 VERSION := 0.7.2
 
