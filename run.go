@@ -26,6 +26,7 @@ var (
 
 	ErrIndexNameRequired = errors.New("index name required")
 	ErrNoWorkers         = errors.New("no workers configured")
+	ErrInvalidBatchSize  = errors.New("cannot use zero batch size")
 )
 
 // Runner bundles various options. Factored out of a former main func and
@@ -68,7 +69,7 @@ func (r *Runner) Run() (err error) {
 		return ErrNoWorkers
 	}
 	if r.BatchSize == 0 {
-		return fmt.Errorf("cannot use zero batch size")
+		return ErrInvalidBatchSize
 	}
 	if r.CpuProfile != "" {
 		f, err := os.Create(r.CpuProfile)
@@ -87,6 +88,7 @@ func (r *Runner) Run() (err error) {
 	if len(r.Servers) == 0 {
 		r.Servers = append(r.Servers, "http://localhost:9200")
 	}
+	r.Servers = mapString(prependSchema, r.Servers)
 	if r.Verbose {
 		log.Printf("using %d server(s)", len(r.Servers))
 	}
@@ -97,7 +99,7 @@ func (r *Runner) Run() (err error) {
 		DocType:   r.DocType,
 		BatchSize: r.BatchSize,
 		Verbose:   r.Verbose,
-		Scheme:    "http",
+		Scheme:    "http", // deprecated
 		IDField:   r.IdentifierField,
 		Username:  r.Username,
 		Password:  r.Password,
@@ -296,4 +298,18 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 func isJSON(str string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(str), &js) == nil
+}
+
+func prependSchema(s string) string {
+	if !strings.HasPrefix(s, "http") {
+		return fmt.Sprintf("http://%s", s)
+	}
+	return s
+}
+
+func mapString(f func(string) string, vs []string) (result []string) {
+	for _, v := range vs {
+		result = append(result, f(v))
+	}
+	return
 }

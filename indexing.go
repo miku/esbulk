@@ -342,9 +342,7 @@ func CreateIndex(options Options, body io.Reader) error {
 		return nil
 	}
 
-	var bb bytes.Buffer
-	tee := io.TeeReader(body, &bb)
-	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), tee)
+	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), body)
 
 	if err != nil {
 		return err
