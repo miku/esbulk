@@ -114,22 +114,6 @@ func (r *Runner) Run() (err error) {
 	if err := CreateIndex(options); err != nil {
 		return err
 	}
-	if r.Mapping != "" {
-		var reader io.Reader
-		if _, err := os.Stat(r.Mapping); os.IsNotExist(err) {
-			reader = strings.NewReader(r.Mapping)
-		} else {
-			file, err := os.Open(r.Mapping)
-			if err != nil {
-				return err
-			}
-			reader = bufio.NewReader(file)
-		}
-		err := PutMapping(options, reader)
-		if err != nil {
-			return err
-		}
-	}
 	if r.Settings != "" {
 		var reader io.Reader
 		if _, err := os.Stat(r.Settings); os.IsNotExist(err) {
@@ -142,6 +126,22 @@ func (r *Runner) Run() (err error) {
 			reader = bufio.NewReader(file)
 		}
 		err := PutSettings(options, reader)
+		if err != nil {
+			return err
+		}
+	}
+	if r.Mapping != "" {
+		var reader io.Reader
+		if _, err := os.Stat(r.Mapping); os.IsNotExist(err) {
+			reader = strings.NewReader(r.Mapping)
+		} else {
+			file, err := os.Open(r.Mapping)
+			if err != nil {
+				return err
+			}
+			reader = bufio.NewReader(file)
+		}
+		err := PutMapping(options, reader)
 		if err != nil {
 			return err
 		}
