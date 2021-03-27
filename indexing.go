@@ -342,7 +342,9 @@ func CreateIndex(options Options, body io.Reader) error {
 		return nil
 	}
 
-	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), body)
+	var bb bytes.Buffer
+	tee := io.TeeReader(body, &bb)
+	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), tee)
 
 	if err != nil {
 		return err
@@ -352,6 +354,10 @@ func CreateIndex(options Options, body io.Reader) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err = pester.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
 
 	// Elasticsearch backwards compat.
 	if resp.StatusCode == 400 {
@@ -369,11 +375,6 @@ func CreateIndex(options Options, body io.Reader) error {
 		}
 		log.Printf("elasticsearch response was: %s", buf.String())
 	}
-
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, resp.Body); err != nil {

@@ -114,13 +114,14 @@ func (r *Runner) Run() (err error) {
 	}
 	var createIndexBody io.Reader
 	if r.Config != "" {
-		if _, err := os.Stat(r.Mapping); os.IsNotExist(err) {
+		if _, err := os.Stat(r.Config); os.IsNotExist(err) {
 			createIndexBody = strings.NewReader(r.Config)
 		} else {
 			file, err := os.Open(r.Config)
 			if err != nil {
 				return err
 			}
+			defer file.Close()
 			createIndexBody = bufio.NewReader(file)
 		}
 	}
@@ -136,6 +137,7 @@ func (r *Runner) Run() (err error) {
 			if err != nil {
 				return err
 			}
+			defer file.Close()
 			reader = bufio.NewReader(file)
 		}
 		err := PutMapping(options, reader)
