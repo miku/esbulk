@@ -49,6 +49,7 @@ type Runner struct {
 	RefreshInterval string
 	Scheme          string
 	Servers         []string
+	Settings        string
 	ShowVersion     bool
 	SkipBroken      bool
 	Username        string
@@ -125,6 +126,22 @@ func (r *Runner) Run() (err error) {
 			reader = bufio.NewReader(file)
 		}
 		err := PutMapping(options, reader)
+		if err != nil {
+			return err
+		}
+	}
+	if r.Settings != "" {
+		var reader io.Reader
+		if _, err := os.Stat(r.Settings); os.IsNotExist(err) {
+			reader = strings.NewReader(r.Settings)
+		} else {
+			file, err := os.Open(r.Settings)
+			if err != nil {
+				return err
+			}
+			reader = bufio.NewReader(file)
+		}
+		err := PutSettings(options, reader)
 		if err != nil {
 			return err
 		}
