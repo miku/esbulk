@@ -315,43 +315,8 @@ func PutMapping(options Options, body io.Reader) error {
 	return resp.Body.Close()
 }
 
-// PutSettings applies a settings from a reader.
-func PutSettings(options Options, body io.Reader) error {
-
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
-	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
-
-	if options.Verbose {
-		log.Printf("applying settings: %s", link)
-	}
-	req, err := http.NewRequest("PUT", link, body)
-	if err != nil {
-		return err
-	}
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := pester.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		var buf bytes.Buffer
-		if _, err := io.Copy(&buf, resp.Body); err != nil {
-			return err
-		}
-		return fmt.Errorf("failed to apply settings with %s: %s", resp.Status, buf.String())
-	}
-	if options.Verbose {
-		log.Printf("applied settings: %s", resp.Status)
-	}
-	return resp.Body.Close()
-}
-
 // CreateIndex creates a new index.
-func CreateIndex(options Options) error {
+func CreateIndex(options Options, body io.Reader) error {
 	rand.Seed(time.Now().Unix())
 	server := options.Servers[rand.Intn(len(options.Servers))]
 	link := fmt.Sprintf("%s/%s", server, options.Index)
@@ -377,7 +342,7 @@ func CreateIndex(options Options) error {
 		return nil
 	}
 
-	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), nil)
+	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), body)
 
 	if err != nil {
 		return err

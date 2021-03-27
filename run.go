@@ -32,6 +32,7 @@ var (
 // should be further split up (TODO).
 type Runner struct {
 	BatchSize       int
+	Config          string
 	CpuProfile      string
 	OpType          string
 	DocType         string
@@ -111,24 +112,20 @@ func (r *Runner) Run() (err error) {
 		}
 		time.Sleep(r.PurgePause)
 	}
-	if err := CreateIndex(options); err != nil {
-		return err
-	}
-	if r.Settings != "" {
-		var reader io.Reader
-		if _, err := os.Stat(r.Settings); os.IsNotExist(err) {
-			reader = strings.NewReader(r.Settings)
+	var createIndexBody io.Reader
+	if r.Config != "" {
+		if _, err := os.Stat(r.Mapping); os.IsNotExist(err) {
+			createIndexBody = strings.NewReader(r.Config)
 		} else {
-			file, err := os.Open(r.Settings)
+			file, err := os.Open(r.Config)
 			if err != nil {
 				return err
 			}
-			reader = bufio.NewReader(file)
+			createIndexBody = bufio.NewReader(file)
 		}
-		err := PutSettings(options, reader)
-		if err != nil {
-			return err
-		}
+	}
+	if err := CreateIndex(options, createIndexBody); err != nil {
+		return err
 	}
 	if r.Mapping != "" {
 		var reader io.Reader
