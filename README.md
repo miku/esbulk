@@ -75,6 +75,8 @@ Usage
     $ esbulk -h
     Usage of esbulk:
       -0    set the number of replicas to 0 during indexing
+      -c string
+            create index mappings, settings, aliases, https://is.gd/3zszeu
       -cpuprofile string
             write cpu profile to file
       -id string
@@ -86,11 +88,16 @@ Usage
       -memprofile string
             write heap profile to file
       -optype string
-            optype (index - will replace existing data, create - will only create a new doc, update - create new or update existing data) (default "index")
+            optype (index - will replace existing data,
+                    create - will only create a new doc,
+                    update - create new or update existing data)
+            (default "index")
       -p string
             pipeline to use to preprocess documents
       -purge
             purge any existing index before indexing
+      -purge-pause duration
+            pause after purge (default 1s)
       -r string
             Refresh interval after import (default "1s")
       -server value
