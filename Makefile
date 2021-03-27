@@ -1,5 +1,5 @@
 TARGETS := esbulk
-VERSION := 0.7.2
+VERSION := 0.7.3
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
 test:
