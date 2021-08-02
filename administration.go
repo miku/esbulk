@@ -1,11 +1,11 @@
 package esbulk
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/segmentio/encoding/json"
 	"github.com/sethgrid/pester"
 )
 

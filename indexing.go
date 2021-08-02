@@ -2,7 +2,6 @@ package esbulk
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/segmentio/encoding/json"
 	"github.com/sethgrid/pester"
 )
 
