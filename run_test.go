@@ -55,9 +55,8 @@ func TestIncompleteConfig(t *testing.T) {
 }
 
 // startServer starts an elasticsearch server from image, exposing the http port.
-func startServer(image string, httpPort int) (testcontainers.Container, error) {
+func startServer(ctx context.Context, image string, httpPort int) (testcontainers.Container, error) {
 	var (
-		ctx   = context.Background()
 		hp    = fmt.Sprintf("%d:9200/tcp", httpPort)
 		parts = strings.Split(image, ":")
 		tag   string
@@ -119,7 +118,7 @@ func TestMinimalConfig(t *testing.T) {
 	}
 
 	for _, conf := range imageConf {
-		c, err := startServer(conf.Image, conf.HttpPort)
+		c, err := startServer(ctx, conf.Image, conf.HttpPort)
 		if err != nil {
 			t.Fatalf("could not start test container: %v", err)
 		}
@@ -215,7 +214,7 @@ func TestMinimalConfig(t *testing.T) {
 func TestGH32(t *testing.T) {
 	skipNoDocker(t)
 	ctx := context.Background()
-	c, err := startServer("elasticsearch:7.11.2", 39200)
+	c, err := startServer(ctx, "elasticsearch:7.11.2", 39200)
 	if err != nil {
 		t.Fatalf("could not start test container: %v", err)
 	}
