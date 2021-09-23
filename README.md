@@ -29,9 +29,7 @@ see full CPU utilization. After that, more workers won't buy any more speed.
 
 Currently, esbulk is [tested against](https://git.io/Jzg2u) elasticsearch
 versions 2, 5, 6 and 7, using
-[testcontainers](https://github.com/testcontainers/testcontainers-go).
-
-Originally written for [Leipzig University
+[testcontainers](https://github.com/testcontainers/testcontainers-go). Originally written for [Leipzig University
 Library](https://en.wikipedia.org/wiki/Leipzig_University_Library), [project
 finc](https://finc.info).
 
