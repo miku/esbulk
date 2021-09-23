@@ -39,7 +39,7 @@ finc](https://finc.info).
 Installation
 ------------
 
-    $ go get github.com/miku/esbulk/cmd/esbulk
+    $ go install github.com/miku/esbulk/cmd/esbulk@latest
 
 For `deb` or `rpm` packages, see: https://github.com/miku/esbulk/releases
 
