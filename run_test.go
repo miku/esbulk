@@ -112,11 +112,12 @@ func TestMinimalConfig(t *testing.T) {
 		Image    string
 		HttpPort int
 	}{
-		{"elasticsearch:7.11.2", 39200},
+		{"elasticsearch:7.14.1", 39200},
 		{"elasticsearch:6.8.14", 39200},
 		{"elasticsearch:5.6.16", 39200},
+		{"elasticsearch:2.3.4", 39200},
 	}
-
+	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
 		c, err := startServer(ctx, conf.Image, conf.HttpPort)
 		if err != nil {
