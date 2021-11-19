@@ -1,5 +1,6 @@
 TARGETS := esbulk
 VERSION := 0.7.5
+GOLDFLAGS := "-w -s"
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
 test:
@@ -12,7 +13,7 @@ fmt:
 	go fmt ./...
 
 all: fmt test
-	go build -o esbulk cmd/esbulk/main.go
+	go build -ldflags=$(GOLDFLAGS) -o esbulk cmd/esbulk/main.go
 
 install:
 	go install
@@ -32,7 +33,7 @@ cover:
 	go tool cover -html=coverage.out
 
 esbulk:
-	CGO_ENABLED=0 go build -o esbulk cmd/esbulk/main.go
+	CGO_ENABLED=0 go build -ldflags=$(GOLDFLAGS) -o esbulk cmd/esbulk/main.go
 
 # ==== packaging
 
