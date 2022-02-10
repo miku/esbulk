@@ -140,95 +140,103 @@ func TestMinimalConfig(t *testing.T) {
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
-		c, err := startServer(ctx, conf.Image, conf.HttpPort)
-		if err != nil {
-			t.Fatalf("could not start test container: %v", err)
-		}
-		base := fmt.Sprintf("http://localhost:%d", conf.HttpPort)
-		resp, err := http.Get(base)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		defer resp.Body.Close()
-		LogReader(t, resp.Body)
-		t.Logf("server should be up at %s", base)
-
-		var cases = []struct {
-			filename  string
-			indexName string
-			numDocs   int64
-			err       error
-		}{
-			{"fixtures/v10k.jsonl", "abc", 10000, nil},
-		}
-		for _, c := range cases {
-			f, err := os.Open(c.filename)
+		wrapper := func() error {
+			c, err := startServer(ctx, conf.Image, conf.HttpPort)
 			if err != nil {
-				t.Errorf("could not open fixture: %s", c.filename)
+				t.Fatalf("could not start test container: %v", err)
 			}
-			defer f.Close()
-			r := Runner{
-				Servers:         []string{"http://localhost:39200"},
-				BatchSize:       5000,
-				NumWorkers:      1,
-				RefreshInterval: "1s",
-				IndexName:       "abc",
-				DocType:         "any", // deprecated with ES7
-				File:            f,
-				Verbose:         true,
-			}
-			err = r.Run()
-			if err != c.err {
-				t.Fatalf("got %v, want %v", err, c.err)
-			}
-			searchURL := fmt.Sprintf("%s/%s/_search", base, r.IndexName)
-			resp, err = http.Get(searchURL)
+			defer func() {
+				if err := c.Terminate(ctx); err != nil {
+					t.Errorf("could not kill container: %v", err)
+				}
+			}()
+			base := fmt.Sprintf("http://localhost:%d", conf.HttpPort)
+			resp, err := http.Get(base)
 			if err != nil {
-				t.Errorf("could not query es: %v", err)
+				t.Fatalf("request failed: %v", err)
 			}
 			defer resp.Body.Close()
-			b := LogReader(t, resp.Body)
-			var (
-				sr7 SearchResponse7
-				sr6 SearchResponse6
-			)
-			if err = json.Unmarshal(b, &sr7); err != nil {
-				if err = json.Unmarshal(b, &sr6); err != nil {
-					t.Errorf("could not parse json response (6, 7): %v", err)
-				} else {
-					t.Log("es6 detected")
+			LogReader(t, resp.Body)
+			t.Logf("server should be up at %s", base)
+
+			var cases = []struct {
+				filename  string
+				indexName string
+				numDocs   int64
+				err       error
+			}{
+				{"fixtures/v10k.jsonl", "abc", 10000, nil},
+			}
+			for _, c := range cases {
+				f, err := os.Open(c.filename)
+				if err != nil {
+					return fmt.Errorf("could not open fixture: %s", c.filename)
+				}
+				defer f.Close()
+				r := Runner{
+					Servers:         []string{"http://localhost:39200"},
+					BatchSize:       5000,
+					NumWorkers:      1,
+					RefreshInterval: "1s",
+					IndexName:       "abc",
+					DocType:         "any", // deprecated with ES7
+					File:            f,
+					Verbose:         true,
+				}
+				err = r.Run()
+				if err != c.err {
+					return fmt.Errorf("got %v, want %v", err, c.err)
+				}
+				searchURL := fmt.Sprintf("%s/%s/_search", base, r.IndexName)
+				resp, err = http.Get(searchURL)
+				if err != nil {
+					return fmt.Errorf("could not query es: %v", err)
+				}
+				defer resp.Body.Close()
+				b := LogReader(t, resp.Body)
+				var (
+					sr7 SearchResponse7
+					sr6 SearchResponse6
+				)
+				if err = json.Unmarshal(b, &sr7); err != nil {
+					if err = json.Unmarshal(b, &sr6); err != nil {
+						t.Errorf("could not parse json response (6, 7): %v", err)
+					} else {
+						t.Log("es6 detected")
+					}
+				}
+				if sr7.Hits.Total.Value != c.numDocs && sr6.Hits.Total != c.numDocs {
+					t.Errorf("expected %d docs", c.numDocs)
 				}
 			}
-			if sr7.Hits.Total.Value != c.numDocs && sr6.Hits.Total != c.numDocs {
-				t.Errorf("expected %d docs", c.numDocs)
+			// Save logs.
+			rc, err := c.Logs(ctx)
+			if err != nil {
+				log.Printf("logs not available: %v", err)
 			}
-		}
-		// Save logs.
-		rc, err := c.Logs(ctx)
-		if err != nil {
-			log.Printf("logs not available: %v", err)
-		}
-		if err := os.MkdirAll("logs", 0755); err != nil {
-			if !os.IsExist(err) {
-				log.Printf("create dir failed: %v", err)
+			if err := os.MkdirAll("logs", 0755); err != nil {
+				if !os.IsExist(err) {
+					log.Printf("create dir failed: %v", err)
+				}
 			}
+			cname, err := c.Name(ctx)
+			if err != nil {
+				t.Logf("failed to get container name: %v", err)
+			}
+			fn := fmt.Sprintf("logs/%s-%s.log", time.Now().Format("20060102150405"), strings.TrimLeft(cname, "/"))
+			f, err := os.Create(fn)
+			if err != nil {
+				log.Printf("failed to create log file: %v", err)
+			}
+			defer f.Close()
+			log.Printf("logging to %s", fn)
+			if _, err := io.Copy(f, rc); err != nil {
+				log.Printf("log failed: %v", err)
+			}
+			return nil
 		}
-		cname, err := c.Name(ctx)
-		if err != nil {
-			t.Logf("failed to get container name: %v", err)
-		}
-		fn := fmt.Sprintf("logs/%s-%s.log", time.Now().Format("20060102150405"), strings.TrimLeft(cname, "/"))
-		f, err := os.Create(fn)
-		if err != nil {
-			log.Printf("failed to create log file: %v", err)
-		}
-		defer f.Close()
-		log.Printf("logging to %s", fn)
-		if _, err := io.Copy(f, rc); err != nil {
-			log.Printf("log failed: %v", err)
-		}
-		if err := c.Terminate(ctx); err != nil {
-			t.Errorf("could not kill container: %v", err)
+		if err := wrapper(); err != nil {
+			t.Fatal(err)
 		}
 	}
 }
