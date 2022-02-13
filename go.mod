@@ -4,12 +4,11 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
-	github.com/segmentio/asm v1.1.3 // indirect
-	github.com/segmentio/encoding v0.3.2
-	github.com/sethgrid/pester v1.1.0
+	github.com/segmentio/encoding v0.3.3
+	github.com/sethgrid/pester v1.2.0
 	github.com/testcontainers/testcontainers-go v0.10.0
 	golang.org/x/net v0.0.0-20210917221730-978cfadd31cf // indirect
-	golang.org/x/sys v0.0.0-20211210111614-af8b64212486 // indirect
+	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
 
