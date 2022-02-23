@@ -4,7 +4,7 @@ GOLDFLAGS := "-w -s"
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
 test:
-	go get -d && go test -v
+	go test -cover -v
 
 imports:
 	goimports -w .

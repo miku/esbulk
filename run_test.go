@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/segmentio/encoding/json"
+	"github.com/sethgrid/pester"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -88,12 +89,13 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 		tag = "latest"
 	}
 	var (
-		name = fmt.Sprintf("esbulk-test-es-%s", tag)
+		name = fmt.Sprintf("esbulk-test-es-%s-%d", tag, time.Now().UnixNano())
 		req  = testcontainers.ContainerRequest{
 			Image: image,
 			Name:  name,
 			Env: map[string]string{
 				"discovery.type": "single-node",
+				"ES_JAVA_OPTS":   "-Xms2g -Xmx2g",
 			},
 			ExposedPorts: []string{hp},
 			WaitingFor:   wait.ForLog("started"),
@@ -133,17 +135,32 @@ func TestMinimalConfig(t *testing.T) {
 		Image    string
 		HttpPort int
 	}{
-		{"elasticsearch:7.14.1", 39200},
-		{"elasticsearch:6.8.14", 39200},
-		{"elasticsearch:5.6.16", 39200},
 		{"elasticsearch:2.3.4", 39200},
+		{"elasticsearch:5.6.16", 39200},
+		{"elasticsearch:6.8.14", 39200},
+		{"elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM
+		{"elasticsearch:8.0.0", 39200},
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
 		wrapper := func() error {
 			c, err := startServer(ctx, conf.Image, conf.HttpPort)
 			if err != nil {
-				t.Fatalf("could not start test container: %v", err)
+				rc, lerr := c.Logs(ctx)
+				if lerr != nil {
+					t.Logf("logs: %v", lerr)
+				}
+				if n, err := io.Copy(os.Stderr, rc); err != nil {
+					t.Logf("logs: %v", err)
+				} else {
+					if n == 0 {
+						t.Logf("container has no logs")
+					}
+				}
+				if err := rc.Close(); err != nil {
+					t.Logf("logs: %v", err)
+				}
+				t.Fatalf("could not start test container for %v: %v", conf.Image, err)
 			}
 			defer func() {
 				if err := c.Terminate(ctx); err != nil {
@@ -151,7 +168,7 @@ func TestMinimalConfig(t *testing.T) {
 				}
 			}()
 			base := fmt.Sprintf("http://localhost:%d", conf.HttpPort)
-			resp, err := http.Get(base)
+			resp, err := pester.Get(base)
 			if err != nil {
 				t.Fatalf("request failed: %v", err)
 			}
@@ -188,7 +205,7 @@ func TestMinimalConfig(t *testing.T) {
 					return fmt.Errorf("got %v, want %v", err, c.err)
 				}
 				searchURL := fmt.Sprintf("%s/%s/_search", base, r.IndexName)
-				resp, err = http.Get(searchURL)
+				resp, err = pester.Get(searchURL)
 				if err != nil {
 					return fmt.Errorf("could not query es: %v", err)
 				}
@@ -244,10 +261,15 @@ func TestMinimalConfig(t *testing.T) {
 func TestGH32(t *testing.T) {
 	skipNoDocker(t)
 	ctx := context.Background()
-	c, err := startServer(ctx, "elasticsearch:7.11.2", 39200)
+	c, err := startServer(ctx, "elasticsearch:7.17.0", 39200)
 	if err != nil {
 		t.Fatalf("could not start test container: %v", err)
 	}
+	defer func() {
+		if err := c.Terminate(ctx); err != nil {
+			t.Errorf("could not kill container: %v", err)
+		}
+	}()
 	base := fmt.Sprintf("http://localhost:%d", 39200)
 	resp, err := http.Get(base)
 	if err != nil {
