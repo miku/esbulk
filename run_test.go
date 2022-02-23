@@ -27,7 +27,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -282,7 +281,7 @@ func TestGH32(t *testing.T) {
 		}
 	}()
 	base := fmt.Sprintf("http://localhost:%d", 39200)
-	resp, err := http.Get(base)
+	resp, err := pester.Get(base)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -295,7 +294,6 @@ func TestGH32(t *testing.T) {
 		t.Errorf("could not open fixture: %v", err)
 	}
 	defer f.Close()
-
 	r := Runner{
 		Servers:         []string{"http://localhost:39200"},
 		BatchSize:       5000,
@@ -307,7 +305,6 @@ func TestGH32(t *testing.T) {
 		File:            f,
 		Verbose:         true,
 	}
-
 	// this should fail with #32
 	err = r.Run()
 	if err != nil {
@@ -315,7 +312,6 @@ func TestGH32(t *testing.T) {
 	} else {
 		t.Fatalf("expected fail, see #32")
 	}
-
 	// w/o doctype, we should be good
 	r = Runner{
 		Servers:         []string{"http://localhost:39200"},
@@ -330,9 +326,6 @@ func TestGH32(t *testing.T) {
 	err = r.Run()
 	if err != nil {
 		t.Fatalf("unexpected failure: %v", err)
-	}
-	if err := c.Terminate(ctx); err != nil {
-		t.Errorf("could not kill container: %v", err)
 	}
 }
 
