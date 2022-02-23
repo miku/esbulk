@@ -1,5 +1,5 @@
 TARGETS := esbulk
-VERSION := 0.7.5
+VERSION := 0.7.6
 GOLDFLAGS := "-w -s"
 
 # http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
