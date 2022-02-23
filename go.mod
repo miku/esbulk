@@ -2,6 +2,7 @@ module github.com/miku/esbulk
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/klauspost/pgzip v1.2.5
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/segmentio/encoding v0.3.4

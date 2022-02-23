@@ -23,7 +23,6 @@ package esbulk
 
 import (
 	"bufio"
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -37,6 +36,7 @@ import (
 	"sync"
 	"time"
 
+	gzip "github.com/klauspost/pgzip"
 	"github.com/segmentio/encoding/json"
 	"github.com/sethgrid/pester"
 )
