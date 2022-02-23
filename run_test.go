@@ -76,7 +76,8 @@ func TestIncompleteConfig(t *testing.T) {
 	}
 }
 
-// startServer starts an elasticsearch server from image, exposing the http port.
+// startServer starts an elasticsearch server from image, exposing the http
+// port. Note that the Java heap required may be 2GB or more.
 func startServer(ctx context.Context, image string, httpPort int) (testcontainers.Container, error) {
 	var (
 		hp    = fmt.Sprintf("%d:9200/tcp", httpPort)
@@ -95,7 +96,11 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 			Name:  name,
 			Env: map[string]string{
 				"discovery.type": "single-node",
-				"ES_JAVA_OPTS":   "-Xms2g -Xmx2g",
+				// If you’re starting a single-node Elasticsearch cluster in a
+				// Docker container, security will be automatically enabled and
+				// configured for you. -- https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-cli-run-dev-mode
+				"xpack.security.enabled": "false",
+				"ES_JAVA_OPTS":           "-Xms2g -Xmx2g",
 			},
 			ExposedPorts: []string{hp},
 			WaitingFor:   wait.ForLog("started"),
@@ -107,7 +112,9 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 	})
 }
 
-func LogReader(t *testing.T, r io.Reader) []byte {
+// logReader reads data from reader and bot logs it and returns it. Fails, if
+// reading fails.
+func logReader(t *testing.T, r io.Reader) []byte {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Fatalf("read failed: %s", err)
@@ -117,6 +124,7 @@ func LogReader(t *testing.T, r io.Reader) []byte {
 	return b
 }
 
+// skipNoDocker skips a test, if docker is not running.
 func skipNoDocker(t *testing.T) {
 	cmd := exec.Command("systemctl", "is-active", "docker")
 	b, err := cmd.CombinedOutput()
@@ -132,14 +140,15 @@ func TestMinimalConfig(t *testing.T) {
 	skipNoDocker(t)
 	ctx := context.Background()
 	var imageConf = []struct {
-		Image    string
-		HttpPort int
+		ElasticsearchMajorVersion int
+		Image                     string
+		HttpPort                  int
 	}{
-		{"elasticsearch:2.3.4", 39200},
-		{"elasticsearch:5.6.16", 39200},
-		{"elasticsearch:6.8.14", 39200},
-		{"elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM
-		{"elasticsearch:8.0.0", 39200},
+		{2, "elasticsearch:2.3.4", 39200},
+		{5, "elasticsearch:5.6.16", 39200},
+		{6, "elasticsearch:6.8.14", 39200},
+		{7, "elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM
+		{8, "elasticsearch:8.0.0", 39200},
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
@@ -173,7 +182,7 @@ func TestMinimalConfig(t *testing.T) {
 				t.Fatalf("request failed: %v", err)
 			}
 			defer resp.Body.Close()
-			LogReader(t, resp.Body)
+			logReader(t, resp.Body)
 			t.Logf("server should be up at %s", base)
 
 			var cases = []struct {
@@ -196,9 +205,11 @@ func TestMinimalConfig(t *testing.T) {
 					NumWorkers:      1,
 					RefreshInterval: "1s",
 					IndexName:       "abc",
-					DocType:         "any", // deprecated with ES7
 					File:            f,
 					Verbose:         true,
+				}
+				if conf.ElasticsearchMajorVersion < 7 {
+					r.DocType = "any" // deprecated with ES7, fails with ES8
 				}
 				err = r.Run()
 				if err != c.err {
@@ -210,7 +221,7 @@ func TestMinimalConfig(t *testing.T) {
 					return fmt.Errorf("could not query es: %v", err)
 				}
 				defer resp.Body.Close()
-				b := LogReader(t, resp.Body)
+				b := logReader(t, resp.Body)
 				var (
 					sr7 SearchResponse7
 					sr6 SearchResponse6
@@ -276,7 +287,7 @@ func TestGH32(t *testing.T) {
 		t.Fatalf("request failed: %v", err)
 	}
 	defer resp.Body.Close()
-	LogReader(t, resp.Body)
+	logReader(t, resp.Body)
 	t.Logf("server should be up at %s", base)
 
 	f, err := os.Open("fixtures/v10k.jsonl")
