@@ -2,7 +2,7 @@ TARGETS := esbulk
 VERSION := 0.7.7
 GOLDFLAGS := "-w -s"
 
-# http://docs.travis-ci.com/user/languages/go/#Default-Test-Script
+# testing against elasticsearch may require larger amounts of memory
 test:
 	go test -cover -v
 
