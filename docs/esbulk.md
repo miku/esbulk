@@ -26,6 +26,9 @@ OPTIONS
 `-0`
   Set the number of replicas to 0 during indexing (this can speed up indexing significantly, the original value is restored at the end and may cause delay until the cluster is green).
 
+`-c` *string*
+  Create index mappings, settings, aliases, https://is.gd/3zszeu.
+
 `-cpuprofile` *string*
   Write cpu profile to file.
 
