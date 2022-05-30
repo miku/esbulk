@@ -99,7 +99,7 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 				// Docker container, security will be automatically enabled and
 				// configured for you. -- https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-cli-run-dev-mode
 				"xpack.security.enabled": "false",
-				"ES_JAVA_OPTS":           "-Xms2g -Xmx2g",
+				"ES_JAVA_OPTS":           "-Xms3g -Xmx3g",
 			},
 			ExposedPorts: []string{hp},
 			WaitingFor:   wait.ForLog("started"),
