@@ -99,7 +99,7 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 				// Docker container, security will be automatically enabled and
 				// configured for you. -- https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-cli-run-dev-mode
 				"xpack.security.enabled": "false",
-				"ES_JAVA_OPTS":           "-Xms3g -Xmx3g",
+				"ES_JAVA_OPTS":           "-Xms4g -Xmx4g",
 			},
 			ExposedPorts: []string{hp},
 			WaitingFor:   wait.ForLog("started"),
@@ -146,7 +146,7 @@ func TestMinimalConfig(t *testing.T) {
 		{2, "elasticsearch:2.3.4", 39200},
 		{5, "elasticsearch:5.6.16", 39200},
 		{6, "elasticsearch:6.8.14", 39200},
-		{7, "elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM
+		{7, "elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
 		{8, "elasticsearch:8.2.2", 39200},
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
