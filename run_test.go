@@ -154,20 +154,6 @@ func TestMinimalConfig(t *testing.T) {
 		wrapper := func() error {
 			c, err := startServer(ctx, conf.Image, conf.HttpPort)
 			if err != nil {
-				rc, lerr := c.Logs(ctx)
-				if lerr != nil {
-					t.Logf("logs: %v", lerr)
-				}
-				if n, err := io.Copy(os.Stderr, rc); err != nil {
-					t.Logf("logs: %v", err)
-				} else {
-					if n == 0 {
-						t.Logf("container has no logs")
-					}
-				}
-				if err := rc.Close(); err != nil {
-					t.Logf("logs: %v", err)
-				}
 				t.Fatalf("could not start test container for %v: %v", conf.Image, err)
 			}
 			defer func() {
