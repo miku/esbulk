@@ -30,6 +30,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 	"testing"
 	"time"
@@ -106,6 +107,7 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 		}
 	)
 	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ProviderType:     testcontainers.ProviderPodman,
 		ContainerRequest: req,
 		Started:          true,
 	})
@@ -123,14 +125,37 @@ func logReader(t *testing.T, r io.Reader) []byte {
 	return b
 }
 
-// skipNoDocker skips a test, if docker is not running.
+// skipNoDocker skips a test, if docker is not running. Also support podman.
 func skipNoDocker(t *testing.T) {
+	noDocker := false
 	cmd := exec.Command("systemctl", "is-active", "docker")
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Skipf("docker seems inactive or not installed: %v", err)
+		noDocker = true
 	}
 	if strings.TrimSpace(string(b)) != "active" {
+		noDocker = true
+	}
+	if !noDocker {
+		// We found some docker.
+		return
+	}
+	// Otherwise, try podman.
+	_, err = exec.LookPath("podman")
+	if err == nil {
+		t.Logf("podman detected")
+		// DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+		usr, err := user.Current()
+		if err != nil {
+			t.Logf("cannot get UID, set DOCKER_HOST manually")
+		} else {
+			sckt := fmt.Sprintf("unix:///run/user/%v/podman/podman.sock", usr.Uid)
+			os.Setenv("DOCKER_HOST", sckt)
+			t.Logf("set DOCKER_HOST to %v", sckt)
+		}
+		noDocker = false
+	}
+	if noDocker {
 		t.Skipf("docker not installed or not running")
 	}
 }
