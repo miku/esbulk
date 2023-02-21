@@ -13,6 +13,7 @@ require (
 	github.com/segmentio/encoding v0.3.6
 	github.com/sethgrid/pester v1.2.0
 	github.com/testcontainers/testcontainers-go v0.17.0
+	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/tools v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20230127162408-596548ed4efa // indirect
 	google.golang.org/grpc v1.52.3 // indirect
