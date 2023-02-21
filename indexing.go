@@ -41,17 +41,18 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 
 // Options represents bulk indexing options.
 type Options struct {
-	Servers   []string
-	Index     string
-	OpType    string
-	DocType   string
-	BatchSize int
-	Verbose   bool
-	IDField   string
-	Scheme    string // http or https; deprecated, use: Servers.
-	Username  string
-	Password  string
-	Pipeline  string
+	Servers         []string
+	Index           string
+	OpType          string
+	DocType         string
+	BatchSize       int
+	Verbose         bool
+	IDField         string
+	Scheme          string // http or https; deprecated, use: Servers.
+	Username        string
+	Password        string
+	Pipeline        string
+	IncludeTypeName bool // https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
 }
 
 // Item represents a bulk action.
@@ -305,7 +306,12 @@ func PutMapping(options Options, body io.Reader) error {
 	if options.DocType == "" {
 		link = fmt.Sprintf("%s/%s/_mapping", server, options.Index)
 	} else {
-		link = fmt.Sprintf("%s/%s/_mapping/%s", server, options.Index, options.DocType)
+		if options.IncludeTypeName {
+			// https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
+			link = fmt.Sprintf("%s/%s/_mapping/%s?include_type_name=true", server, options.Index, options.DocType)
+		} else {
+			link = fmt.Sprintf("%s/%s/_mapping/%s", server, options.Index, options.DocType)
+		}
 	}
 
 	if options.Verbose {

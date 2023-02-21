@@ -172,7 +172,7 @@ func TestMinimalConfig(t *testing.T) {
 		{5, "elasticsearch:5.6.16", 39200},
 		{6, "elasticsearch:6.8.14", 39200},
 		{7, "elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
-		{8, "elasticsearch:8.2.2", 39200},
+		{8, "elasticsearch:8.6.0", 39200},
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
