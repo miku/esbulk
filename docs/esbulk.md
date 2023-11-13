@@ -58,7 +58,7 @@ OPTIONS
   Refresh interval after import (default "1s")
 
 `-server` *URL*
-  SOLR hostport including schema like http://localhost:9200
+  Server hostport including schema like http://localhost:9200
 
 `-size` *N*
   Batch size. Defaults to 1000. Increase for small documents.
