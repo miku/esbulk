@@ -39,7 +39,7 @@ esbulk:
 
 image:
 	DOCKER_CONTENT_TRUST=0 docker build --rm -t tirtir/esbulk:latest -t tirtir/esbulk:$(VERSION) .
-	docker rmi -f $$(docker images -q --filter label=stage=intermediate)
+	docker image prune --force --filter label=stage=intermediate
 
 rmi:
 	docker rmi tirtir/esbulk:$(VERSION)
