@@ -4,12 +4,11 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/docker/docker v24.0.7+incompatible // indirect
-	github.com/klauspost/compress v1.17.3 // indirect
+	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/pgzip v1.2.6
-	github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f // indirect
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/segmentio/encoding v0.3.7
+	github.com/segmentio/encoding v0.4.0
 	github.com/sethgrid/pester v1.2.0
 	github.com/testcontainers/testcontainers-go v0.17.0
 	golang.org/x/net v0.18.0 // indirect
