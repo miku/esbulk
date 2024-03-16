@@ -43,38 +43,6 @@ Installation
 
 For `deb` or `rpm` packages, see: https://github.com/miku/esbulk/releases
 
-[intenthq](https://www.intenthq.com/) made available a Docker image at
-[intenthq/esbulk-docker](https://hub.docker.com/r/intenthq/esbulk-docker/) as
-well (thanks [@albertpastrana](https://github.com/albertpastrana)), [#25](https://github.com/miku/esbulk/issues/25).
-
-Run:
-
-```
-$ docker run -it --rm intenthq/esbulk-docker esbulk -v
-0.5.1
-```
-
-Since 0.5.2 (May 2019) there is a [Dockerfile](Dockerfile) included in the
-repo, it uses a multi-stage build and a FROM SCRATCH base, which allows for a
-lightweight 7.85MB image.
-
-```
-$ git clone https://github.com/miku/esbulk.git
-$ cd esbulk
-$ make image # use make rmi to cleanup
-$ docker run -it --rm esbulk:0.5.2 -v
-0.5.2
-```
-
-Or, via hub/cloud:
-
-```
-$ docker run -it --rm tirtir/esbulk -v
-0.5.2
-```
-
-On Docker Hub: [tirtir/esbulk](https://hub.docker.com/repository/docker/tirtir/esbulk/tags?page=1&ordering=last_updated).
-
 Usage
 -----
 
