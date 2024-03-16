@@ -275,7 +275,7 @@ Contributors
 * Christian Solomon
 * Mikael Byström
 
-and other.
+and others.
 
 Measurements
 ------------
