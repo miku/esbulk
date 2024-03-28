@@ -3,7 +3,7 @@ module github.com/miku/esbulk
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/containerd/containerd v1.7.11 // indirect
-	github.com/docker/docker v24.0.7+incompatible // indirect
+	github.com/docker/docker v24.0.9+incompatible // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/klauspost/pgzip v1.2.6
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
