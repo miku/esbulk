@@ -14,7 +14,7 @@ require (
 	github.com/sethgrid/pester v1.2.0
 	github.com/testcontainers/testcontainers-go v0.17.0
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect
 )
 
