@@ -53,31 +53,32 @@ var (
 // Runner bundles various options. Factored out of a former main func and
 // should be further split up (TODO).
 type Runner struct {
-	BatchSize       int
-	Config          string
-	CpuProfile      string
-	OpType          string
-	DocType         string
-	File            *os.File
-	FileGzipped     bool
-	IdentifierField string
-	IndexName       string
-	Mapping         string
-	MemProfile      string
-	NumWorkers      int
-	Password        string
-	Pipeline        string
-	Purge           bool
-	PurgePause      time.Duration
-	RefreshInterval string
-	Scheme          string
-	Servers         []string
-	Settings        string
-	ShowVersion     bool
-	SkipBroken      bool
-	Username        string
-	Verbose         bool
-	ZeroReplica     bool
+	BatchSize          int
+	Config             string
+	CpuProfile         string
+	OpType             string
+	DocType            string
+	File               *os.File
+	FileGzipped        bool
+	IdentifierField    string
+	IndexName          string
+	Mapping            string
+	MemProfile         string
+	NumWorkers         int
+	Password           string
+	Pipeline           string
+	Purge              bool
+	PurgePause         time.Duration
+	RefreshInterval    string
+	Scheme             string
+	Servers            []string
+	Settings           string
+	ShowVersion        bool
+	SkipBroken         bool
+	Username           string
+	Verbose            bool
+	InsecureSkipVerify bool
+	ZeroReplica        bool
 }
 
 // Run starts indexing documents from file into a given index.
