@@ -1,5 +1,5 @@
 TARGETS := esbulk
-VERSION := 0.7.18
+VERSION := 0.7.24
 GOLDFLAGS := "-w -s"
 
 # testing against elasticsearch may require larger amounts of memory
