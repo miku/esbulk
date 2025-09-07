@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/segmentio/encoding/json"
 	"github.com/sethgrid/pester"
 	"github.com/testcontainers/testcontainers-go"
@@ -104,6 +105,17 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 			},
 			ExposedPorts: []string{hp},
 			WaitingFor:   wait.ForLog("started"),
+			// $ docker run --platform linux/amd64 m 8g -e ES_JAVA_OPTS="-Xms512m -Xmx512m" elasticsearch:2.3.4
+			// library initialization failed - unable to allocate file descriptor table - out of memory#
+			HostConfigModifier: func(hc *container.HostConfig) {
+				hc.Resources = container.Resources{
+					Ulimits: []*container.Ulimit{{
+						Name: "nofile",
+						Hard: 65536,
+						Soft: 65536,
+					}},
+				}
+			},
 		}
 	)
 	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
