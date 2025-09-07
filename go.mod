@@ -1,8 +1,9 @@
 module github.com/miku/esbulk
 
 require (
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/klauspost/pgzip v1.2.6
-	github.com/segmentio/encoding v0.4.1
+	github.com/segmentio/encoding v0.5.3
 	github.com/sethgrid/pester v1.2.0
 	github.com/testcontainers/testcontainers-go v0.33.0
 )
@@ -17,7 +18,6 @@ require (
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v27.3.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -55,13 +55,13 @@ require (
 	go.opentelemetry.io/otel/trace v1.30.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.2
