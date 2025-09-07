@@ -23,6 +23,7 @@ package esbulk
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -41,18 +42,19 @@ var errParseCannotServerAddr = errors.New("cannot parse server address")
 
 // Options represents bulk indexing options.
 type Options struct {
-	Servers         []string
-	Index           string
-	OpType          string
-	DocType         string
-	BatchSize       int
-	Verbose         bool
-	IDField         string
-	Scheme          string // http or https; deprecated, use: Servers.
-	Username        string
-	Password        string
-	Pipeline        string
-	IncludeTypeName bool // https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
+	Servers            []string
+	Index              string
+	OpType             string
+	DocType            string
+	BatchSize          int
+	Verbose            bool
+	IDField            string
+	Scheme             string // http or https; deprecated, use: Servers.
+	Username           string
+	Password           string
+	Pipeline           string
+	IncludeTypeName    bool // https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
+	InsecureSkipVerify bool
 }
 
 // Item represents a bulk action.
@@ -226,7 +228,19 @@ func BulkIndex(docs []string, options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	response, err := pester.Do(req)
+
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+
+	response, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -325,7 +339,17 @@ func PutMapping(options Options, body io.Reader) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := pester.Do(req)
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -357,8 +381,17 @@ func CreateIndex(options Options, body io.Reader) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := pester.Do(req)
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -378,7 +411,7 @@ func CreateIndex(options Options, body io.Reader) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = pester.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		return nil
 	}
@@ -427,7 +460,17 @@ func DeleteIndex(options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := pester.Do(req)
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

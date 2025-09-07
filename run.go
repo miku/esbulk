@@ -23,6 +23,7 @@ package esbulk
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -115,17 +116,18 @@ func (r *Runner) Run() (err error) {
 		log.Printf("using %d server(s)", len(r.Servers))
 	}
 	options := Options{
-		Servers:   r.Servers,
-		Index:     r.IndexName,
-		OpType:    r.OpType,
-		DocType:   r.DocType,
-		BatchSize: r.BatchSize,
-		Verbose:   r.Verbose,
-		Scheme:    "http", // deprecated
-		IDField:   r.IdentifierField,
-		Username:  r.Username,
-		Password:  r.Password,
-		Pipeline:  r.Pipeline,
+		Servers:            r.Servers,
+		Index:              r.IndexName,
+		OpType:             r.OpType,
+		DocType:            r.DocType,
+		BatchSize:          r.BatchSize,
+		Verbose:            r.Verbose,
+		Scheme:             "http", // deprecated
+		IDField:            r.IdentifierField,
+		Username:           r.Username,
+		Password:           r.Password,
+		Pipeline:           r.Pipeline,
+		InsecureSkipVerify: r.InsecureSkipVerify,
 	}
 	if r.Verbose {
 		log.Println(options)
@@ -306,7 +308,19 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := pester.Do(req)
+	// Create custom HTTP client if InsecureSkipVerify is true
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}

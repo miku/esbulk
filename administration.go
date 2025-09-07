@@ -22,6 +22,7 @@
 package esbulk
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,7 +43,17 @@ func FlushIndex(idx int, options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := pester.Do(req)
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -65,7 +76,17 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := pester.Do(req)
+	client := pester.New()
+	if options.InsecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
