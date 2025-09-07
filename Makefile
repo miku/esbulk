@@ -1,6 +1,6 @@
 PKGNAME := esbulk
 TARGETS := esbulk
-VERSION := 0.7.24
+VERSION := 0.7.25
 
 # testing against elasticsearch may require larger amounts of memory
 test:
