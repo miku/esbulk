@@ -8,6 +8,9 @@ BuildRoot:  %{_tmppath}/%{name}-build
 Group:      System/Base
 Vendor:     UB Leipzig
 URL:        https://github.com/miku/esbulk
+Source:     %{name}.tar.gz
+
+%define _binary_payload w1.zstdio
 
 %description
 
@@ -18,17 +21,18 @@ Fast parallel bulk loading utility for elasticsearch.
 # %{name} which in this case would be my_maintenance_scripts. So your source bundle
 # needs to have a top level directory inside called my_maintenance _scripts
 # %setup -n %{name}
+%setup -q -n esbulk
 
 %build
-# this section is empty for this example as we're not actually building anything
+# Nothing to build - precompiled binaries
 
 %install
 # create directories where the files will be located
-mkdir -p $RPM_BUILD_ROOT/usr/local/sbin
+mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 
 # put the files in to the relevant directories.
 # the argument on -m is the permissions expressed as octal. (See chmod man page for details.)
-install -m 755 esbulk $RPM_BUILD_ROOT/usr/local/sbin
+install -m 755 esbulk $RPM_BUILD_ROOT/usr/local/bin
 
 mkdir -p $RPM_BUILD_ROOT/usr/local/share/man/man1
 install -m 644 esbulk.1 $RPM_BUILD_ROOT/usr/local/share/man/man1/esbulk.1
@@ -45,12 +49,12 @@ rm -rf %{_topdir}/BUILD/%{name}
 # list files owned by the package here
 %files
 %defattr(-,root,root)
-/usr/local/sbin/esbulk
+/usr/local/bin/esbulk
 /usr/local/share/man/man1/esbulk.1
 
 %changelog
 
-* Mon Oct 2 2020 gsocgsoc
+* Fri Oct 2 2020 gsocgsoc
 - 0.6.2 release
 - support for skipping broken json
 
@@ -71,7 +75,7 @@ rm -rf %{_topdir}/BUILD/%{name}
 - 0.4.0 release
 - attempted fix for https://github.com/miku/esbulk/issues/5
 
-* Thu Nov 10 2015 Martin Czygan
+* Tue Nov 10 2015 Martin Czygan
 - 0.3.5 release
 - add -mapping and -purge flags
 

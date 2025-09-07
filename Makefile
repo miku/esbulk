@@ -1,6 +1,6 @@
+PKGNAME := esbulk
 TARGETS := esbulk
 VERSION := 0.7.24
-GOLDFLAGS := "-w -s"
 
 # testing against elasticsearch may require larger amounts of memory
 test:
@@ -13,7 +13,7 @@ fmt:
 	go fmt ./...
 
 all: fmt test
-	go build -ldflags=$(GOLDFLAGS) -o esbulk cmd/esbulk/main.go
+	go build -o esbulk cmd/esbulk/main.go
 
 install:
 	go install
@@ -33,7 +33,7 @@ cover:
 	go tool cover -html=coverage.out
 
 esbulk:
-	CGO_ENABLED=0 go build -ldflags=$(GOLDFLAGS) -o esbulk cmd/esbulk/main.go
+	CGO_ENABLED=0 go build -o esbulk cmd/esbulk/main.go
 
 # ==== packaging
 
@@ -53,10 +53,14 @@ deb: $(TARGETS)
 	mv packaging/debian/esbulk*deb .
 
 rpm: $(TARGETS)
+	# on deb based distros, you may need:
+	# sudo rpm --initdb && sudo chmod -R a+r /var/lib/rpm/
 	mkdir -p $(HOME)/rpmbuild/{BUILD,SOURCES,SPECS,RPMS}
-	cp ./packaging/rpm/esbulk.spec $(HOME)/rpmbuild/SPECS
-	cp $(TARGETS) $(HOME)/rpmbuild/BUILD
-	# md2man-roff docs/esbulk.md > docs/esbulk.1
-	cp docs/esbulk.1 $(HOME)/rpmbuild/BUILD
-	./packaging/rpm/buildrpm.sh esbulk
-	cp $(HOME)/rpmbuild/RPMS/x86_64/esbulk*.rpm .
+	mkdir -p $(HOME)/rpmbuild/SOURCES/$(PKGNAME)
+	cp ./packaging/rpm/$(PKGNAME).spec $(HOME)/rpmbuild/SPECS
+	cp $(TARGETS) $(HOME)/rpmbuild/SOURCES/$(PKGNAME)
+	cp docs/$(PKGNAME).1 $(HOME)/rpmbuild/SOURCES/$(PKGNAME)
+	./packaging/rpm/buildrpm.sh $(PKGNAME)
+	cp $(HOME)/rpmbuild/RPMS/x86_64/$(PKGNAME)-$(VERSION)*.rpm .
+
+
