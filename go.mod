@@ -1,7 +1,7 @@
 module github.com/miku/esbulk
 
 require (
-	github.com/docker/docker v27.3.1+incompatible
+	github.com/docker/docker v28.0.0+incompatible
 	github.com/klauspost/pgzip v1.2.6
 	github.com/segmentio/encoding v0.5.3
 	github.com/sethgrid/pester v1.2.0
