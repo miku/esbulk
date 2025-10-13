@@ -49,7 +49,7 @@ deb: $(TARGETS)
 	cp $(TARGETS) packaging/debian/esbulk/usr/sbin
 	mkdir -p packaging/debian/esbulk/usr/local/share/man/man1
 	cp docs/esbulk.1 packaging/debian/esbulk/usr/local/share/man/man1
-	cd packaging/debian && fakeroot dpkg-deb --build esbulk .
+	cd packaging/debian && fakeroot dpkg-deb -Zzstd --build esbulk .
 	mv packaging/debian/esbulk*deb .
 
 rpm: $(TARGETS)
