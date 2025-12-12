@@ -296,15 +296,10 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 	server := options.Servers[rand.Intn(len(options.Servers))]
 	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
 
-	req, err := http.NewRequest("PUT", link, r)
+	req, err := CreateHTTPRequest("PUT", link, r, options)
 	if err != nil {
 		return nil, err
 	}
-	// Auth handling.
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 
 	// Create custom HTTP client if InsecureSkipVerify is true
 	client := CreateHTTPClient(options.InsecureSkipVerify)

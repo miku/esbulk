@@ -24,7 +24,6 @@ package esbulk
 import (
 	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/segmentio/encoding/json"
 )
@@ -33,14 +32,10 @@ import (
 func FlushIndex(idx int, options Options) error {
 	server := options.Servers[idx]
 	link := fmt.Sprintf("%s/%s/_flush", server, options.Index)
-	req, err := http.NewRequest("POST", link, nil)
+	req, err := CreateHTTPRequest("POST", link, nil, options)
 	if err != nil {
 		return err
 	}
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -57,14 +52,10 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 	server := options.Servers[idx]
 	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
 
-	req, err := http.NewRequest("GET", link, nil)
+	req, err := CreateHTTPRequest("GET", link, nil, options)
 	if err != nil {
 		return nil, err
 	}
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {

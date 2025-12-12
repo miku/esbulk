@@ -74,6 +74,27 @@ func CreateHTTPClient(insecureSkipVerify bool) *pester.Client {
 	return client
 }
 
+// CreateHTTPRequest builds an HTTP request with authentication and headers.
+// It handles basic authentication, content-type headers, and returns a ready-to-use request.
+func CreateHTTPRequest(method, url string, body io.Reader, options Options) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set basic authentication if credentials are provided
+	if options.Username != "" && options.Password != "" {
+		req.SetBasicAuth(options.Username, options.Password)
+	}
+
+	// Set content type header (for requests with body)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	return req, nil
+}
+
 // Item represents a bulk action.
 type Item struct {
 	IndexAction struct {
@@ -258,15 +279,10 @@ func BulkIndex(docs []string, options Options) error {
 	// bad requests. Finally, if we have a HTTP 200, the bulk request could
 	// still have failed: for that we need to decode the elasticsearch
 	// response.
-	req, err := http.NewRequest("POST", link, strings.NewReader(body))
+	req, err := CreateHTTPRequest("POST", link, strings.NewReader(body), options)
 	if err != nil {
 		return err
 	}
-
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 
 	client := CreateHTTPClient(options.InsecureSkipVerify)
 
@@ -361,14 +377,10 @@ func PutMapping(options Options, body io.Reader) error {
 	if options.Verbose {
 		log.Printf("applying mapping: %s", link)
 	}
-	req, err := http.NewRequest("PUT", link, body)
+	req, err := CreateHTTPRequest("PUT", link, body, options)
 	if err != nil {
 		return err
 	}
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -393,15 +405,10 @@ func CreateIndex(options Options, body io.Reader) error {
 	server := options.Servers[rand.Intn(len(options.Servers))]
 	link := fmt.Sprintf("%s/%s", server, options.Index)
 
-	req, err := http.NewRequest("GET", link, nil)
+	req, err := CreateHTTPRequest("GET", link, nil, options)
 	if err != nil {
 		return err
 	}
-
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -414,15 +421,10 @@ func CreateIndex(options Options, body io.Reader) error {
 		return nil
 	}
 
-	req, err = http.NewRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), body)
-
+	req, err = CreateHTTPRequest("PUT", fmt.Sprintf("%s/%s/", server, options.Index), body, options)
 	if err != nil {
 		return err
 	}
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 	resp, err = client.Do(req)
 	if err != nil {
 		return nil
@@ -464,14 +466,10 @@ func DeleteIndex(options Options) error {
 	server := options.Servers[rand.Intn(len(options.Servers))]
 	link := fmt.Sprintf("%s/%s", server, options.Index)
 
-	req, err := http.NewRequest("DELETE", link, nil)
+	req, err := CreateHTTPRequest("DELETE", link, nil, options)
 	if err != nil {
 		return err
 	}
-	if options.Username != "" && options.Password != "" {
-		req.SetBasicAuth(options.Username, options.Password)
-	}
-	req.Header.Set("Content-Type", "application/json")
 	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {

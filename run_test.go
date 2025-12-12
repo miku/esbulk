@@ -120,7 +120,7 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 		}
 	)
 	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ProviderType:     testcontainers.ProviderPodman,
+		ProviderType:     testcontainers.ProviderDefault,
 		ContainerRequest: req,
 		Started:          true,
 	})
