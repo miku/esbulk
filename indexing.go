@@ -38,7 +38,13 @@ import (
 	"github.com/sethgrid/pester"
 )
 
-var errParseCannotServerAddr = errors.New("cannot parse server address")
+var (
+	errParseCannotServerAddr = errors.New("cannot parse server address")
+
+	// Worker errors
+	ErrWorkerCopyFailed = errors.New("worker failed to copy document batch")
+	ErrWorkerBulkIndex   = errors.New("worker bulk index operation failed")
+)
 
 // Options represents bulk indexing options.
 type Options struct {
@@ -319,21 +325,26 @@ func BulkIndex(docs []string, options Options) error {
 }
 
 // Worker will batch index documents that come in on the lines channel.
-func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
+// Errors are sent to the provided error channel; the function always returns nil
+// to satisfy the WaitGroup contract.
+func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup, errChan chan<- error) error {
 	defer wg.Done()
 	var docs []string
 	counter := 0
+
 	for s := range lines {
 		docs = append(docs, s)
 		counter++
 		if counter%options.BatchSize == 0 {
 			msg := make([]string, len(docs))
 			if n := copy(msg, docs); n != len(docs) {
-				log.Fatalf("expected %d, but got %d", len(docs), n)
+				errChan <- fmt.Errorf("worker %s: %w: expected %d, but got %d", id, ErrWorkerCopyFailed, len(docs), n)
+				continue
 			}
 
 			if err := BulkIndex(msg, options); err != nil {
-				log.Fatal(err)
+				errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
+				continue
 			}
 			if options.Verbose {
 				log.Printf("[%s] @%d\n", id, counter)
@@ -341,20 +352,26 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup) {
 			docs = nil
 		}
 	}
+
 	if len(docs) == 0 {
-		return
+		return nil
 	}
+
 	msg := make([]string, len(docs))
 	if n := copy(msg, docs); n != len(docs) {
-		log.Fatalf("expected %d, but got %d", len(docs), n)
+		errChan <- fmt.Errorf("worker %s: %w: expected %d, but got %d", id, ErrWorkerCopyFailed, len(docs), n)
+		return nil
 	}
 
 	if err := BulkIndex(msg, options); err != nil {
-		log.Fatal(err)
+		errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
+		return nil
 	}
 	if options.Verbose {
 		log.Printf("[%s] @%d\n", id, counter)
 	}
+
+	return nil
 }
 
 // PutMapping applies a mapping from a reader.

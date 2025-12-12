@@ -170,17 +170,19 @@ func (r *Runner) Run() (err error) {
 		}
 	}
 	var (
-		queue = make(chan string)
-		wg    sync.WaitGroup
+		queue    = make(chan string)
+		wg       sync.WaitGroup
+		errChan  = make(chan error, r.NumWorkers)
 	)
 	wg.Add(r.NumWorkers)
 	for i := 0; i < r.NumWorkers; i++ {
 		name := fmt.Sprintf("worker-%d", i)
-		go Worker(name, options, queue, &wg)
+		go Worker(name, options, queue, &wg, errChan)
 	}
 	if r.Verbose {
 		log.Printf("started %d workers", r.NumWorkers)
 	}
+
 	for i, _ := range options.Servers {
 		// Store number_of_replicas settings for restoration later.
 		doc, err := GetSettings(i, options)
@@ -235,7 +237,7 @@ func (r *Runner) Run() (err error) {
 	if r.FileGzipped {
 		zreader, err := gzip.NewReader(r.File)
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("failed to create gzip reader: %w", err)
 		}
 		reader = bufio.NewReader(zreader)
 	}
@@ -266,6 +268,22 @@ func (r *Runner) Run() (err error) {
 	}
 	close(queue)
 	wg.Wait()
+	close(errChan)
+
+	// Check for any worker errors that occurred
+	var workerErrors []string
+	for err := range errChan {
+		workerErrors = append(workerErrors, err.Error())
+		if r.Verbose {
+			log.Printf("worker error: %v", err)
+		}
+	}
+
+	// If any worker errors occurred, return them
+	if len(workerErrors) > 0 {
+		return fmt.Errorf("worker errors occurred: %s", strings.Join(workerErrors, "; "))
+	}
+
 	elapsed := time.Since(start)
 	if r.MemProfile != "" {
 		f, err := os.Create(r.MemProfile)
