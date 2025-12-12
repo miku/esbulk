@@ -45,7 +45,7 @@ import (
 
 var (
 	// Version of application.
-	Version = "0.7.26"
+	Version = "0.7.28"
 
 	ErrIndexNameRequired = errors.New("index name required")
 	ErrNoWorkers         = errors.New("no workers configured")
@@ -196,9 +196,9 @@ func (r *Runner) Run() (err error) {
 		}
 	}
 	var (
-		queue    = make(chan string)
-		wg       sync.WaitGroup
-		errChan  = make(chan error, r.NumWorkers)
+		queue   = make(chan string)
+		wg      sync.WaitGroup
+		errChan = make(chan error, r.NumWorkers)
 	)
 	wg.Add(r.NumWorkers)
 	for i := 0; i < r.NumWorkers; i++ {
@@ -270,7 +270,7 @@ func (r *Runner) Run() (err error) {
 	if r.Verbose && r.File != nil {
 		log.Printf("start reading from %v", r.File.Name())
 	}
-	readLoop:
+readLoop:
 	for {
 		select {
 		case <-r.ctx.Done():
