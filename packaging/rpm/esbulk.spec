@@ -9,8 +9,11 @@ Group:      System/Base
 Vendor:     UB Leipzig
 URL:        https://github.com/miku/esbulk
 Source:     %{name}.tar.gz
+%global debug_package %{nil}
 
 %define _binary_payload w1.zstdio
+
+
 
 %description
 
