@@ -122,6 +122,80 @@ func nestedStr(tokstr []string, docmap map[string]interface{}, currentID string)
 
 }
 
+// extractDocumentID extracts an ID from a JSON document based on the given ID field specification.
+// The ID field can contain multiple fields separated by commas or spaces, and supports
+// nested field access using dot notation (e.g., "user.id,name").
+// Returns: extracted ID string, updated document (if needed), error
+func extractDocumentID(doc string, idField string) (string, string, error) {
+	var docmap map[string]interface{}
+	dec := json.NewDecoder(strings.NewReader(doc))
+	dec.UseNumber()
+	if err := dec.Decode(&docmap); err != nil {
+		return "", "", fmt.Errorf("failed to json decode doc: %v", err)
+	}
+
+	// Split ID field specification into individual fields
+	id := strings.FieldsFunc(idField, func(r rune) bool { return r == ',' || r == ' ' })
+
+	// Extract and concatenate values from each field
+	var idstr string
+	for counter := range id {
+		currentID := id[counter]
+		tokstr := strings.Split(currentID, ".")
+		var TokenVal interface{}
+
+		if len(tokstr) > 1 {
+			// Handle nested field access
+			TokenVal = nestedStr(tokstr, docmap, currentID)
+			if TokenVal == nil {
+				return "", "", fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
+			}
+		} else {
+			// Handle simple field access
+			var ok2 bool
+			TokenVal, ok2 = docmap[currentID]
+			if !ok2 {
+				return "", "", fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
+			}
+		}
+
+		// Convert value to string representation
+		switch tempStr1 := interface{}(TokenVal).(type) {
+		case string:
+			idstr = idstr + tempStr1
+		case fmt.Stringer:
+			idstr = idstr + tempStr1.String()
+		case json.Number:
+			idstr = idstr + tempStr1.String()
+		default:
+			return "", "", fmt.Errorf("cannot convert id value to string")
+		}
+	}
+
+	// Check if any of the fields was named '_id' (special case)
+	var containsUnderscoreID bool
+	for count := range id {
+		if id[count] == "_id" {
+			containsUnderscoreID = true
+			break
+		}
+	}
+
+	// Remove '_id' field from document if it was used for ID extraction
+	var updatedDoc string
+	if containsUnderscoreID {
+		delete(docmap, "_id")
+		// Marshal the updated document back to string
+		marshaledDoc, err := json.Marshal(docmap)
+		if err != nil {
+			return "", "", err
+		}
+		updatedDoc = string(marshaledDoc)
+	}
+
+	return idstr, updatedDoc, nil
+}
+
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch.
 func BulkIndex(docs []string, options Options) error {
 	if len(docs) == 0 {
@@ -152,71 +226,19 @@ func BulkIndex(docs []string, options Options) error {
 		// If an "-id" is given, peek into the document to extract the ID and
 		// use it in the header.
 		if options.IDField != "" {
-			var docmap map[string]interface{}
-			dec := json.NewDecoder(strings.NewReader(doc))
-			dec.UseNumber()
-			if err := dec.Decode(&docmap); err != nil {
-				return fmt.Errorf("failed to json decode doc: %v", err)
+			idStr, updatedDoc, err := extractDocumentID(doc, options.IDField)
+			if err != nil {
+				return err
 			}
-
-			idstring := options.IDField // A delimiter separates string with all the fields to be used as ID.
-			id := strings.FieldsFunc(idstring, func(r rune) bool { return r == ',' || r == ' ' })
-			// ID can be any type at this point, try to find a string
-			// representation or bail out.
-			var idstr string
-			var currentID string
-			for counter := range id {
-				currentID = id[counter]
-				tokstr := strings.Split(currentID, ".")
-				var TokenVal interface{}
-				if len(tokstr) > 1 {
-					TokenVal = nestedStr(tokstr, docmap, currentID)
-					if TokenVal == nil {
-						return fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
-					}
-				} else {
-					var ok2 bool
-					TokenVal, ok2 = docmap[currentID]
-					if !ok2 {
-						return fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
-					}
-				}
-				switch tempStr1 := interface{}(TokenVal).(type) {
-				case string:
-					idstr = idstr + tempStr1
-				case fmt.Stringer:
-					idstr = idstr + tempStr1.String()
-				case json.Number:
-					idstr = idstr + tempStr1.String()
-				default:
-					return fmt.Errorf("cannot convert id value to string")
-				}
+			if updatedDoc != "" {
+				doc = updatedDoc
 			}
 
 			if options.DocType == "" {
-				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_id": %q}}`, options.OpType, options.Index, idstr)
+				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_id": %q}}`, options.OpType, options.Index, idStr)
 			} else {
 				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_type": "%s", "_id": %q}}`,
-					options.OpType, options.Index, options.DocType, idstr)
-			}
-
-			// Remove the IDField if it is accidentally named '_id', since
-			// Field [_id] is a metadata field and cannot be added inside a
-			// document.
-			var flag int
-			for count := range id {
-				if id[count] == "_id" {
-					flag = 1 // Check if any of the id fields to be concatenated is named '_id'.
-				}
-			}
-
-			if flag == 1 {
-				delete(docmap, "_id")
-				b, err := json.Marshal(docmap)
-				if err != nil {
-					return err
-				}
-				doc = string(b)
+					options.OpType, options.Index, options.DocType, idStr)
 			}
 		}
 
