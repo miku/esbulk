@@ -23,6 +23,7 @@ package esbulk
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -31,9 +32,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"os/signal"
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	gzip "github.com/klauspost/pgzip"
@@ -78,6 +81,11 @@ type Runner struct {
 	Verbose            bool
 	InsecureSkipVerify bool
 	ZeroReplica        bool
+	// Request timeout for HTTP operations
+	RequestTimeout time.Duration
+	// Context for cancellation
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // Run starts indexing documents from file into a given index.
@@ -86,6 +94,23 @@ func (r *Runner) Run() (err error) {
 		fmt.Println(Version)
 		return nil
 	}
+
+	// Set up context for graceful shutdown
+	r.ctx, r.cancel = context.WithCancel(context.Background())
+	defer r.cancel()
+
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start a goroutine to handle signals
+	go func() {
+		sig := <-sigChan
+		if r.Verbose {
+			log.Printf("received signal %v, initiating graceful shutdown", sig)
+		}
+		r.cancel()
+	}()
 	if r.NumWorkers == 0 {
 		return ErrNoWorkers
 	}
@@ -126,6 +151,7 @@ func (r *Runner) Run() (err error) {
 		Password:           r.Password,
 		Pipeline:           r.Pipeline,
 		InsecureSkipVerify: r.InsecureSkipVerify,
+		RequestTimeout:     r.RequestTimeout,
 	}
 	if r.Verbose {
 		log.Println(options)
@@ -177,7 +203,7 @@ func (r *Runner) Run() (err error) {
 	wg.Add(r.NumWorkers)
 	for i := 0; i < r.NumWorkers; i++ {
 		name := fmt.Sprintf("worker-%d", i)
-		go Worker(name, options, queue, &wg, errChan)
+		go Worker(r.ctx, name, options, queue, &wg, errChan)
 	}
 	if r.Verbose {
 		log.Printf("started %d workers", r.NumWorkers)
@@ -244,31 +270,60 @@ func (r *Runner) Run() (err error) {
 	if r.Verbose && r.File != nil {
 		log.Printf("start reading from %v", r.File.Name())
 	}
+	readLoop:
 	for {
-		line, err := reader.ReadString('\n')
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if line = strings.TrimSpace(line); len(line) == 0 {
-			continue
-		}
-		if r.SkipBroken {
-			if !(isJSON(line)) {
-				if r.Verbose {
-					fmt.Printf("skipped line [%s]\n", line)
-				}
+		select {
+		case <-r.ctx.Done():
+			// Context cancelled, stop reading
+			if r.Verbose {
+				log.Printf("stopping document reading due to context cancellation")
+			}
+			break readLoop
+		default:
+			line, err := reader.ReadString('\n')
+			if err == io.EOF {
+				break readLoop
+			}
+			if err != nil {
+				return err
+			}
+			if line = strings.TrimSpace(line); len(line) == 0 {
 				continue
 			}
+			if r.SkipBroken {
+				if !(isJSON(line)) {
+					if r.Verbose {
+						fmt.Printf("skipped line [%s]\n", line)
+					}
+					continue
+				}
+			}
+			select {
+			case queue <- line:
+				counter++
+			case <-r.ctx.Done():
+				// Context cancelled while trying to send to queue
+				if r.Verbose {
+					log.Printf("stopping document reading due to context cancellation")
+				}
+				break readLoop
+			}
 		}
-		queue <- line
-		counter++
 	}
 	close(queue)
 	wg.Wait()
 	close(errChan)
+
+	// Check for context cancellation first
+	select {
+	case <-r.ctx.Done():
+		if r.Verbose {
+			log.Printf("operation cancelled due to context")
+		}
+		return r.ctx.Err()
+	default:
+		// Continue with error checking
+	}
 
 	// Check for any worker errors that occurred
 	var workerErrors []string
@@ -320,7 +375,7 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 	}
 
 	// Create custom HTTP client if InsecureSkipVerify is true
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
 
 	resp, err := client.Do(req)
 	if err != nil {

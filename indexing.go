@@ -23,6 +23,7 @@ package esbulk
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -61,11 +62,20 @@ type Options struct {
 	Pipeline           string
 	IncludeTypeName    bool // https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
 	InsecureSkipVerify bool
+	// Timeout for HTTP requests (default: 30s)
+	RequestTimeout time.Duration
 }
 
-// CreateHTTPClient creates a pester client with optional TLS configuration.
-func CreateHTTPClient(insecureSkipVerify bool) *pester.Client {
+// CreateHTTPClient creates a pester client with optional TLS configuration and timeout.
+func CreateHTTPClient(insecureSkipVerify bool, timeout time.Duration) *pester.Client {
 	client := pester.New()
+
+	// Set default timeout if not specified
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+
+	client.Timeout = timeout
 
 	if insecureSkipVerify {
 		transport := &http.Transport{
@@ -73,7 +83,10 @@ func CreateHTTPClient(insecureSkipVerify bool) *pester.Client {
 				InsecureSkipVerify: true,
 			},
 		}
-		customClient := &http.Client{Transport: transport}
+		customClient := &http.Client{
+			Transport: transport,
+			Timeout:   timeout,
+		}
 		client.EmbedHTTPClient(customClient)
 	}
 
@@ -82,8 +95,8 @@ func CreateHTTPClient(insecureSkipVerify bool) *pester.Client {
 
 // CreateHTTPRequest builds an HTTP request with authentication and headers.
 // It handles basic authentication, content-type headers, and returns a ready-to-use request.
-func CreateHTTPRequest(method, url string, body io.Reader, options Options) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, body)
+func CreateHTTPRequestWithContext(ctx context.Context, method, url string, body io.Reader, options Options) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +112,13 @@ func CreateHTTPRequest(method, url string, body io.Reader, options Options) (*ht
 	}
 
 	return req, nil
+}
+
+// CreateHTTPRequest builds an HTTP request with authentication and headers.
+// It handles basic authentication, content-type headers, and returns a ready-to-use request.
+// Deprecated: Use CreateHTTPRequestWithContext instead.
+func CreateHTTPRequest(method, url string, body io.Reader, options Options) (*http.Request, error) {
+	return CreateHTTPRequestWithContext(context.Background(), method, url, body, options)
 }
 
 // Item represents a bulk action.
@@ -224,7 +244,7 @@ func extractDocumentID(doc string, idField string) (string, string, error) {
 }
 
 // BulkIndex takes a set of documents as strings and indexes them into elasticsearch.
-func BulkIndex(docs []string, options Options) error {
+func BulkIndex(ctx context.Context, docs []string, options Options) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -285,12 +305,12 @@ func BulkIndex(docs []string, options Options) error {
 	// bad requests. Finally, if we have a HTTP 200, the bulk request could
 	// still have failed: for that we need to decode the elasticsearch
 	// response.
-	req, err := CreateHTTPRequest("POST", link, strings.NewReader(body), options)
+	req, err := CreateHTTPRequestWithContext(ctx, "POST", link, strings.NewReader(body), options)
 	if err != nil {
 		return err
 	}
 
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
 
 	response, err := client.Do(req)
 	if err != nil {
@@ -327,31 +347,43 @@ func BulkIndex(docs []string, options Options) error {
 // Worker will batch index documents that come in on the lines channel.
 // Errors are sent to the provided error channel; the function always returns nil
 // to satisfy the WaitGroup contract.
-func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup, errChan chan<- error) error {
+func Worker(ctx context.Context, id string, options Options, lines chan string, wg *sync.WaitGroup, errChan chan<- error) error {
 	defer wg.Done()
 	var docs []string
 	counter := 0
 
-	for s := range lines {
-		docs = append(docs, s)
-		counter++
-		if counter%options.BatchSize == 0 {
-			msg := make([]string, len(docs))
-			if n := copy(msg, docs); n != len(docs) {
-				errChan <- fmt.Errorf("worker %s: %w: expected %d, but got %d", id, ErrWorkerCopyFailed, len(docs), n)
-				continue
+	for {
+		select {
+		case <-ctx.Done():
+			// Context cancelled, stop processing
+			return nil
+		case s, ok := <-lines:
+			if !ok {
+				// Channel closed
+				goto processRemaining
 			}
+			docs = append(docs, s)
+			counter++
+			if counter%options.BatchSize == 0 {
+				msg := make([]string, len(docs))
+				if n := copy(msg, docs); n != len(docs) {
+					errChan <- fmt.Errorf("worker %s: %w: expected %d, but got %d", id, ErrWorkerCopyFailed, len(docs), n)
+					continue
+				}
 
-			if err := BulkIndex(msg, options); err != nil {
-				errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
-				continue
+				if err := BulkIndex(ctx, msg, options); err != nil {
+					errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
+					continue
+				}
+				if options.Verbose {
+					log.Printf("[%s] @%d\n", id, counter)
+				}
+				docs = nil
 			}
-			if options.Verbose {
-				log.Printf("[%s] @%d\n", id, counter)
-			}
-			docs = nil
 		}
 	}
+
+processRemaining:
 
 	if len(docs) == 0 {
 		return nil
@@ -363,7 +395,7 @@ func Worker(id string, options Options, lines chan string, wg *sync.WaitGroup, e
 		return nil
 	}
 
-	if err := BulkIndex(msg, options); err != nil {
+	if err := BulkIndex(ctx, msg, options); err != nil {
 		errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
 		return nil
 	}
@@ -398,7 +430,7 @@ func PutMapping(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -426,7 +458,7 @@ func CreateIndex(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -487,7 +519,7 @@ func DeleteIndex(options Options) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

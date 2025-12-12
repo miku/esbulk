@@ -54,6 +54,7 @@ var (
 	refreshInterval    = flag.String("r", "1s", "Refresh interval after import")
 	pipeline           = flag.String("p", "", "pipeline to use to preprocess documents")
 	insecureSkipVerify = flag.Bool("k", false, "skip insecure certificate verification")
+	requestTimeout     = flag.Duration("timeout", 30*time.Second, "timeout for HTTP requests")
 	serverFlags        esbulk.ArrayFlags
 )
 
@@ -98,6 +99,7 @@ func main() {
 		Purge:              *purge,
 		PurgePause:         *purgePause,
 		RefreshInterval:    *refreshInterval,
+		RequestTimeout:     *requestTimeout,
 		Servers:            serverFlags,
 		ShowVersion:        *version,
 		SkipBroken:         *skipbroken,

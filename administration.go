@@ -36,7 +36,7 @@ func FlushIndex(idx int, options Options) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify)
+	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
