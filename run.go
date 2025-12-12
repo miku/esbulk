@@ -23,7 +23,6 @@ package esbulk
 
 import (
 	"bufio"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -39,7 +38,6 @@ import (
 
 	gzip "github.com/klauspost/pgzip"
 	"github.com/segmentio/encoding/json"
-	"github.com/sethgrid/pester"
 )
 
 var (
@@ -309,16 +307,7 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 	req.Header.Set("Content-Type", "application/json")
 
 	// Create custom HTTP client if InsecureSkipVerify is true
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 
 	resp, err := client.Do(req)
 	if err != nil {

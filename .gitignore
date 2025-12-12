@@ -35,3 +35,4 @@ Vagrantfile
 TODO.md
 /tmp
 /logs
+.claude/*

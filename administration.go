@@ -22,13 +22,11 @@
 package esbulk
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/segmentio/encoding/json"
-	"github.com/sethgrid/pester"
 )
 
 // FlushIndex flushes index.
@@ -43,16 +41,7 @@ func FlushIndex(idx int, options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -76,16 +65,7 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

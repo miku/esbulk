@@ -57,6 +57,23 @@ type Options struct {
 	InsecureSkipVerify bool
 }
 
+// CreateHTTPClient creates a pester client with optional TLS configuration.
+func CreateHTTPClient(insecureSkipVerify bool) *pester.Client {
+	client := pester.New()
+
+	if insecureSkipVerify {
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		customClient := &http.Client{Transport: transport}
+		client.EmbedHTTPClient(customClient)
+	}
+
+	return client
+}
+
 // Item represents a bulk action.
 type Item struct {
 	IndexAction struct {
@@ -229,16 +246,7 @@ func BulkIndex(docs []string, options Options) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 
 	response, err := client.Do(req)
 	if err != nil {
@@ -339,16 +347,7 @@ func PutMapping(options Options, body io.Reader) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -381,16 +380,7 @@ func CreateIndex(options Options, body io.Reader) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -460,16 +450,7 @@ func DeleteIndex(options Options) error {
 		req.SetBasicAuth(options.Username, options.Password)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := pester.New()
-	if options.InsecureSkipVerify {
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		customClient := &http.Client{Transport: transport}
-		client.EmbedHTTPClient(customClient)
-	}
+	client := CreateHTTPClient(options.InsecureSkipVerify)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

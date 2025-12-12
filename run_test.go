@@ -108,6 +108,7 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 			// $ docker run --platform linux/amd64 m 8g -e ES_JAVA_OPTS="-Xms512m -Xmx512m" elasticsearch:2.3.4
 			// library initialization failed - unable to allocate file descriptor table - out of memory#
 			HostConfigModifier: func(hc *container.HostConfig) {
+				hc.CgroupnsMode = container.CgroupnsModeHost
 				hc.Resources = container.Resources{
 					Ulimits: []*container.Ulimit{{
 						Name: "nofile",
@@ -180,10 +181,19 @@ func TestMinimalConfig(t *testing.T) {
 		Image                     string
 		HttpPort                  int
 	}{
-		{2, "elasticsearch:2.3.4", 39200},
+		// $ docker pull elasticsearch:2.3.4
+		// 2.3.4: Pulling from library/elasticsearch
+		// ca69fe441e9d: Already exists
+		// failed to unpack image on snapshotter overlayfs: apply layer error
+		// for "docker.io/library/elasticsearch:2.3.4": failed to extract layer
+		// sha256:2f71b45e4e254ddceb187b1467f5471f0e14d7124ac2dd7fdd7ddbc76e13f0e5:
+		// NotFound: failed to get reader from content store: content digest
+		// sha256:357ea8c3d80bc25792e010facfc98aee5972ebc47e290eb0d5aea3671a901cab:
+		// not found
+		// {2, "elasticsearch:2.3.4", 39200},
 		{5, "elasticsearch:5.6.16", 39200},
 		{6, "elasticsearch:6.8.14", 39200},
-		{7, "elasticsearch:7.17.0", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
+		{7, "elasticsearch:7.17.7", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
 		{8, "elasticsearch:8.6.0", 39200},
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
@@ -294,7 +304,8 @@ func TestMinimalConfig(t *testing.T) {
 func TestGH32(t *testing.T) {
 	skipNoDocker(t)
 	ctx := context.Background()
-	c, err := startServer(ctx, "elasticsearch:7.17.0", 39200)
+	// 7.17.7 bundles a Java version, that has improved cgroups2 support
+	c, err := startServer(ctx, "elasticsearch:7.17.7", 39200)
 	if err != nil {
 		t.Fatalf("could not start test container: %v", err)
 	}
