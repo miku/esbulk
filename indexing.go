@@ -154,27 +154,26 @@ type BulkResponse struct {
 	Items     []Item `json:"items"`
 }
 
-// nestedStr handles the nested JSON values.
-func nestedStr(tokstr []string, docmap map[string]interface{}, currentID string) interface{} {
-	thistok := tokstr[0]
-	tempStr2, ok := docmap[thistok].(map[string]interface{})
+// nestedStr handles nested JSON values.
+func nestedStr(tokstr []string, docmap map[string]any, currentID string) any {
+	tok := tokstr[0]
+	tmps, ok := docmap[tok].(map[string]any)
 	if !ok {
 		return nil
 	}
-	var TokenVal interface{}
-	var ok1 bool
-	TokenVal = tempStr2
+	var v any
+	v = tmps
 	for count3 := 1; count3 < len(tokstr); count3++ {
-		thistok = tokstr[count3]
-		TokenVal, ok1 = tempStr2[thistok]
-		if !ok1 {
+		tok = tokstr[count3]
+		v, ok = tmps[tok]
+		if !ok {
 			return nil
 		}
 		if count3 < len(tokstr)-1 {
-			tempStr2 = TokenVal.(map[string]interface{})
+			tmps = v.(map[string]any)
 		}
 	}
-	return TokenVal
+	return v
 
 }
 
@@ -183,31 +182,27 @@ func nestedStr(tokstr []string, docmap map[string]interface{}, currentID string)
 // nested field access using dot notation (e.g., "user.id,name").
 // Returns: extracted ID string, updated document (if needed), error
 func extractDocumentID(doc string, idField string) (string, string, error) {
-	var docmap map[string]interface{}
+	var docmap map[string]any
 	dec := json.NewDecoder(strings.NewReader(doc))
 	dec.UseNumber()
 	if err := dec.Decode(&docmap); err != nil {
 		return "", "", fmt.Errorf("failed to json decode doc: %v", err)
 	}
 
-	// Split ID field specification into individual fields
 	id := strings.FieldsFunc(idField, func(r rune) bool { return r == ',' || r == ' ' })
 
-	// Extract and concatenate values from each field
 	var idstr string
 	for counter := range id {
 		currentID := id[counter]
 		tokstr := strings.Split(currentID, ".")
-		var TokenVal interface{}
+		var TokenVal any
 
 		if len(tokstr) > 1 {
-			// Handle nested field access
 			TokenVal = nestedStr(tokstr, docmap, currentID)
 			if TokenVal == nil {
 				return "", "", fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
 			}
 		} else {
-			// Handle simple field access
 			var ok2 bool
 			TokenVal, ok2 = docmap[currentID]
 			if !ok2 {
@@ -216,7 +211,7 @@ func extractDocumentID(doc string, idField string) (string, string, error) {
 		}
 
 		// Convert value to string representation
-		switch tempStr1 := interface{}(TokenVal).(type) {
+		switch tempStr1 := any(TokenVal).(type) {
 		case string:
 			idstr = idstr + tempStr1
 		case fmt.Stringer:
@@ -517,8 +512,10 @@ func CreateIndex(options Options, body io.Reader) error {
 
 // DeleteIndex removes an index.
 func DeleteIndex(options Options) error {
-	server := options.RandomServer()
-	link := fmt.Sprintf("%s/%s", server, options.Index)
+	var (
+		server = options.RandomServer()
+		link   = fmt.Sprintf("%s/%s", server, options.Index)
+	)
 	req, err := CreateHTTPRequest("DELETE", link, nil, options)
 	if err != nil {
 		return err

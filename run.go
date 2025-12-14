@@ -204,7 +204,6 @@ func (r *Runner) Run() (err error) {
 	if r.Verbose {
 		log.Printf("started %d workers", r.NumWorkers)
 	}
-
 	for i, _ := range options.Servers {
 		// Store number_of_replicas settings for restoration later.
 		doc, err := GetSettings(i, options)
