@@ -211,8 +211,10 @@ func (r *Runner) Run() (err error) {
 		if err != nil {
 			return err
 		}
-		// TODO(miku): Rework this.
-		numberOfReplicas := doc[options.Index].(map[string]interface{})["settings"].(map[string]interface{})["index"].(map[string]interface{})["number_of_replicas"]
+		numberOfReplicas, err := getNumberOfReplicas(doc, options.Index)
+		if err != nil {
+			return fmt.Errorf("failed to get number_of_replicas: %w", err)
+		}
 		if r.Verbose {
 			log.Printf("on shutdown, number_of_replicas will be set back to %s", numberOfReplicas)
 		}
@@ -353,6 +355,40 @@ readLoop:
 		log.Printf("%d docs in %0.2fs at %0.3f docs/s with %d workers\n", counter, elapsed, rate, r.NumWorkers)
 	}
 	return nil
+}
+
+// getNumberOfReplicas safely extracts the number_of_replicas setting from the Elasticsearch settings response.
+// The expected structure is: map[indexName] -> settings -> index -> number_of_replicas
+func getNumberOfReplicas(doc map[string]interface{}, indexName string) (interface{}, error) {
+	index, ok := doc[indexName]
+	if !ok {
+		return nil, fmt.Errorf("index %s not found in settings response", indexName)
+	}
+	indexMap, ok := index.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map for index %s, got %T", indexName, index)
+	}
+	settings, ok := indexMap["settings"]
+	if !ok {
+		return nil, fmt.Errorf("settings not found for index %s", indexName)
+	}
+	settingsMap, ok := settings.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map for settings, got %T", settings)
+	}
+	indexSettings, ok := settingsMap["index"]
+	if !ok {
+		return nil, fmt.Errorf("index settings not found for index %s", indexName)
+	}
+	indexSettingsMap, ok := indexSettings.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map for index settings, got %T", indexSettings)
+	}
+	numberOfReplicas, ok := indexSettingsMap["number_of_replicas"]
+	if !ok {
+		return nil, fmt.Errorf("number_of_replicas not found in index settings for index %s", indexName)
+	}
+	return numberOfReplicas, nil
 }
 
 // indexSettingsRequest runs updates an index setting, given a body and
