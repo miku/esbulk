@@ -47,7 +47,7 @@ Usage
 -----
 
     $ esbulk -h
-    Usage of esbulk:
+	Usage of esbulk:
       -0    set the number of replicas to 0 during indexing
       -c string
             create index mappings, settings, aliases, https://is.gd/3zszeu
@@ -74,12 +74,16 @@ Usage
             pause after purge (default 1s)
       -r string
             Refresh interval after import (default "1s")
+      -seed int
+            seed for random server selection (default: current unix nano)
       -server value
             elasticsearch server, this works with https as well
       -size int
             bulk batch size (default 1000)
       -skipbroken
             skip broken json
+      -timeout duration
+            timeout for HTTP requests (default 30s)
       -type string
             elasticsearch doc type (deprecated since ES7)
       -u string
@@ -88,7 +92,7 @@ Usage
       -verbose
             output basic progress
       -w int
-            number of workers to use (default 12)
+            number of workers to use (default 8)
       -z    unzip gz'd file on the fly
 
 
