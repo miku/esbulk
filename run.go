@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -95,15 +94,12 @@ func (r *Runner) Run() (err error) {
 		return nil
 	}
 
-	// Set up context for graceful shutdown
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	defer r.cancel()
 
-	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start a goroutine to handle signals
 	go func() {
 		sig := <-sigChan
 		if r.Verbose {
@@ -365,8 +361,7 @@ readLoop:
 func indexSettingsRequest(body string, options Options) (*http.Response, error) {
 	r := strings.NewReader(body)
 
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
+	server := options.RandomServer()
 	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
 
 	req, err := CreateHTTPRequest("PUT", link, r, options)

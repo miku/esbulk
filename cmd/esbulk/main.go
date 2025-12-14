@@ -24,6 +24,7 @@ package main
 import (
 	"flag"
 	"log"
+	"math/rand"
 	"os"
 	"runtime"
 	"strings"
@@ -56,11 +57,19 @@ var (
 	insecureSkipVerify = flag.Bool("k", false, "skip insecure certificate verification")
 	requestTimeout     = flag.Duration("timeout", 30*time.Second, "timeout for HTTP requests")
 	serverFlags        esbulk.ArrayFlags
+	seed               = flag.Int64("seed", 0, "seed for random server selection (default: current unix nano)")
 )
 
 func main() {
 	flag.Var(&serverFlags, "server", "elasticsearch server, this works with https as well")
 	flag.Parse()
+
+	// Seed the random generator. If seed is 0, use current unix nano time.
+	seedValue := *seed
+	if seedValue == 0 {
+		seedValue = time.Now().UnixNano()
+	}
+	rand.Seed(seedValue)
 	var (
 		file               *os.File = os.Stdin
 		username, password string

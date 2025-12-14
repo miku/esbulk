@@ -44,7 +44,7 @@ var (
 
 	// Worker errors
 	ErrWorkerCopyFailed = errors.New("worker failed to copy document batch")
-	ErrWorkerBulkIndex   = errors.New("worker bulk index operation failed")
+	ErrWorkerBulkIndex  = errors.New("worker bulk index operation failed")
 )
 
 // Options represents bulk indexing options.
@@ -64,6 +64,15 @@ type Options struct {
 	InsecureSkipVerify bool
 	// Timeout for HTTP requests (default: 30s)
 	RequestTimeout time.Duration
+}
+
+// RandomServer returns a random server from the Servers slice.
+// Uses the global random generator seeded at program startup.
+func (o *Options) RandomServer() string {
+	if len(o.Servers) == 0 {
+		return ""
+	}
+	return o.Servers[rand.Intn(len(o.Servers))]
 }
 
 // CreateHTTPClient creates a pester client with optional TLS configuration and timeout.
@@ -249,8 +258,7 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 		return nil
 	}
 
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
+	server := options.RandomServer()
 
 	link := fmt.Sprintf("%s/_bulk", server)
 
@@ -409,8 +417,7 @@ processRemaining:
 // PutMapping applies a mapping from a reader.
 func PutMapping(options Options, body io.Reader) error {
 
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
+	server := options.RandomServer()
 	var link string
 	if options.DocType == "" {
 		link = fmt.Sprintf("%s/%s/_mapping", server, options.Index)
@@ -450,8 +457,7 @@ func PutMapping(options Options, body io.Reader) error {
 
 // CreateIndex creates a new index.
 func CreateIndex(options Options, body io.Reader) error {
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
+	server := options.RandomServer()
 	link := fmt.Sprintf("%s/%s", server, options.Index)
 
 	req, err := CreateHTTPRequest("GET", link, nil, options)
@@ -511,10 +517,8 @@ func CreateIndex(options Options, body io.Reader) error {
 
 // DeleteIndex removes an index.
 func DeleteIndex(options Options) error {
-	rand.Seed(time.Now().Unix())
-	server := options.Servers[rand.Intn(len(options.Servers))]
+	server := options.RandomServer()
 	link := fmt.Sprintf("%s/%s", server, options.Index)
-
 	req, err := CreateHTTPRequest("DELETE", link, nil, options)
 	if err != nil {
 		return err
