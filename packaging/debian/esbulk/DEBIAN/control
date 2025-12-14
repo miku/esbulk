@@ -1,5 +1,5 @@
 Package: esbulk
-Version: 0.7.28
+Version: 0.7.29
 Section: utils
 Priority: optional
 Architecture: amd64
