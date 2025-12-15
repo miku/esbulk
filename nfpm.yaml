@@ -72,7 +72,7 @@ vendor: Leipzig University Library
 homepage: https://github.com/miku/esbulk
 
 # License.
-license: MIT
+license: GPL-3.0
 
 # Date to be used as mtime on internal files.
 #
@@ -95,7 +95,7 @@ contents:
     dst: /usr/local/bin/esbulk
 
   - src: docs/esbulk.1
-    dst: /usr/local/share/man/man1
+    dst: /usr/local/share/man/man1/esbulk.1
 
 
 # Umask to be used on files without explicit mode set.
