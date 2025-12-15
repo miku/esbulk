@@ -45,8 +45,8 @@ rmi:
 	docker rmi tirtir/esbulk:$(VERSION)
 
 deb: $(TARGETS)
-	mkdir -p packaging/debian/esbulk/usr/sbin
-	cp $(TARGETS) packaging/debian/esbulk/usr/sbin
+	mkdir -p packaging/debian/esbulk/usr/local/bin
+	cp $(TARGETS) packaging/debian/esbulk/usr/local/bin
 	mkdir -p packaging/debian/esbulk/usr/local/share/man/man1
 	cp docs/esbulk.1 packaging/debian/esbulk/usr/local/share/man/man1
 	cd packaging/debian && fakeroot dpkg-deb -Zzstd --build esbulk .
