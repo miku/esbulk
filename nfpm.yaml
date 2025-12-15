@@ -112,3 +112,8 @@ contents:
 # Default: 0o002 (will remove world-writable permissions)
 umask: 0o002
 
+deb:
+  compression: zstd
+
+rpm:
+  compression: zstd
