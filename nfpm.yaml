@@ -1,0 +1,114 @@
+# Name. (required)
+name: esbulk
+
+# Examples: `all`, `amd64`, `386`, `arm5`, `arm6`, `arm7`, `arm64`, `mips`,
+# `mipsle`, `mips64le`, `ppc64le`, `s390`
+arch: amd64
+
+# Platform.
+# Examples: `linux` (default), `darwin`
+platform: linux
+
+# Version. (required)
+# This will expand any env var you set in the field, e.g. version: ${SEMVER}
+# Some package managers, like deb, require the version to start with a digit.
+# Hence, you should not prefix the version with 'v'.
+version: 0.7.30
+
+# Version Schema allows you to specify how to parse the version string.
+# Default is `semver`
+#   `semver` attempt to parse the version string as a valid semver version.
+#       The parser is lenient; it will strip a `v` prefix and will accept
+#       versions with fewer than 3 components, like `v1.2`.
+#       If parsing succeeds, then the version will be molded into a format
+#       compatible with the specific packager used.
+#       If parsing fails, then the version is used as-is.
+#   `none` skip trying to parse the version string and just use what is passed in
+version_schema: semver
+
+# Version Epoch.
+# A package with a higher version epoch will always be considered newer.
+# See: https://www.debian.org/doc/debian-policy/ch-controlfields.html#epochs-should-be-used-sparingly
+epoch: 1
+
+# Version Release, aka revision.
+# This will expand any env var you set in the field, e.g. release: ${VERSION_RELEASE}
+# This is appended to the `version` after `prerelease`. This should be
+# incremented if you release an updated package of the same upstream version,
+# and it should reset to 1 when bumping the version.
+release: 1
+
+# Section.
+# This is only used by the deb packager.
+# See: https://www.debian.org/doc/debian-policy/ch-archive.html#sections
+section: default
+
+# Priority.
+# Defaults to `optional` on deb
+# Defaults to empty on rpm and apk
+# See: https://www.debian.org/doc/debian-policy/ch-archive.html#priorities
+priority: extra
+
+# Maintainer. (required)
+# This will expand any env var you set in the field, e.g. maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
+# Defaults to empty on rpm and apk
+# Leaving the 'maintainer' field unset will not be allowed in a future version
+maintainer: Martin Czygan <martin.czygan@gmail.com>
+
+# Description.
+# This will expand any env var you set in the field, e.g. description: ${DESCRIPTION}
+# Defaults to `no description given`.
+# Most packagers call for a one-line synopsis of the package. Some (like deb)
+# also call for a multi-line description starting on the second line.
+description: Fast parallel bulk indexing utility for elasticsearch
+
+# Vendor.
+# This will expand any env var you set in the field, e.g. vendor: ${VENDOR}
+# This is only used by the rpm packager.
+vendor: Leipzig University Library
+
+# Package's homepage.
+# This will expand any env var you set in the field, e.g. homepage: ${CI_PROJECT_URL}
+homepage: https://github.com/miku/esbulk
+
+# License.
+license: MIT
+
+# Date to be used as mtime on internal files.
+#
+# Default is the value of $SOURCE_DATE_EPOCH (which should be an Unix time),
+# or the current time.
+# Read more about SOURCE_DATE_EPOCH at https://reproducible-builds.org/docs/source-date-epoch/
+# mtime: "2009-11-10T23:00:00Z"
+
+# Changelog YAML file, see: https://github.com/goreleaser/chglog
+# changelog: "changelog.yaml"
+
+# Disables globbing for files, config_files, etc.
+disable_globbing: false
+
+
+# Contents to add to the package
+# This can be binaries or any other files.
+contents:
+  - src: esbulk
+    dst: /usr/local/bin/esbulk
+
+  - src: docs/esbulk.1
+    dst: /usr/local/share/man/man1
+
+
+# Umask to be used on files without explicit mode set.
+#
+# By default, nFPM will inherit the mode of the original file that's being
+# added.
+# This may lead to issues if these files are checkout out in Git, for example,
+# as it won't keep all the permissions on fresh checkouts, or if the local
+# system has a problematic umask setting.
+#
+# This setting allows to set the umask for all files that are added to the
+# package without a specific file_info.mode set.
+#
+# Default: 0o002 (will remove world-writable permissions)
+umask: 0o002
+

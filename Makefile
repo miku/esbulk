@@ -1,23 +1,29 @@
 PKGNAME := esbulk
 TARGETS := esbulk
-VERSION := 0.7.29
+VERSION := 0.7.30
 
 # testing against elasticsearch may require larger amounts of memory
+.PHONY: test
 test:
 	go test -cover -v
 
+.PHONY: imports
 imports:
 	goimports -w .
 
+.PHONY: fmt
 fmt:
 	go fmt ./...
 
+.PHONY: all
 all: fmt test
 	go build -o esbulk cmd/esbulk/main.go
 
+.PHONY: install
 install:
 	go install
 
+.PHONY: clean
 clean:
 	go clean
 	rm -f coverage.out
@@ -28,6 +34,7 @@ clean:
 	rm -rf packaging/debian/esbulk/usr
 	rm -rf logs/
 
+.PHONY: cover
 cover:
 	go get -d && go test -v	-coverprofile=coverage.out
 	go tool cover -html=coverage.out
@@ -35,32 +42,26 @@ cover:
 esbulk:
 	CGO_ENABLED=0 go build -o esbulk cmd/esbulk/main.go
 
-# ==== packaging
+# ==== packaging ====
+#
+# Packaging deb, rpm requires "nfpm" https://nfpm.goreleaser.com/
+#
+# $ go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
+.PHONY: image
 image:
 	DOCKER_CONTENT_TRUST=0 docker build --rm -t tirtir/esbulk:latest -t tirtir/esbulk:$(VERSION) .
 	docker image prune --force --filter label=stage=intermediate
 
+.PHONY: rmi
 rmi:
 	docker rmi tirtir/esbulk:$(VERSION)
 
+.PHONY: deb
 deb: $(TARGETS)
-	mkdir -p packaging/debian/esbulk/usr/local/bin
-	cp $(TARGETS) packaging/debian/esbulk/usr/local/bin
-	mkdir -p packaging/debian/esbulk/usr/local/share/man/man1
-	cp docs/esbulk.1 packaging/debian/esbulk/usr/local/share/man/man1
-	cd packaging/debian && fakeroot dpkg-deb -Zzstd --build esbulk .
-	mv packaging/debian/esbulk*deb .
+	SEMVER=$(VERSION) nfpm package -p deb
 
+.PHONY: rpm
 rpm: $(TARGETS)
-	# on deb based distros, you may need:
-	# sudo rpm --initdb && sudo chmod -R a+r /var/lib/rpm/
-	mkdir -p $(HOME)/rpmbuild/{BUILD,SOURCES,SPECS,RPMS}
-	mkdir -p $(HOME)/rpmbuild/SOURCES/$(PKGNAME)
-	cp ./packaging/rpm/$(PKGNAME).spec $(HOME)/rpmbuild/SPECS
-	cp $(TARGETS) $(HOME)/rpmbuild/SOURCES/$(PKGNAME)
-	cp docs/$(PKGNAME).1 $(HOME)/rpmbuild/SOURCES/$(PKGNAME)
-	./packaging/rpm/buildrpm.sh $(PKGNAME)
-	cp $(HOME)/rpmbuild/RPMS/x86_64/$(PKGNAME)-$(VERSION)*.rpm .
-
+	SEMVER=$(VERSION) nfpm package -p rpm
 

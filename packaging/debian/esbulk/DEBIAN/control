@@ -1,9 +1,0 @@
-Package: esbulk
-Version: 0.7.29
-Section: utils
-Priority: optional
-Architecture: amd64
-Essential: no
-Depends: libc6 (>= 2.12)
-Maintainer: Martin Czygan
-Description: Fast parallel bulk loading utility for elasticsearch.
