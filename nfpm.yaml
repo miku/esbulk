@@ -3,17 +3,17 @@ name: esbulk
 
 # Examples: `all`, `amd64`, `386`, `arm5`, `arm6`, `arm7`, `arm64`, `mips`,
 # `mipsle`, `mips64le`, `ppc64le`, `s390`
-arch: amd64
+arch: ${GOARCH}
 
 # Platform.
 # Examples: `linux` (default), `darwin`
-platform: linux
+platform: ${GOOS}
 
 # Version. (required)
 # This will expand any env var you set in the field, e.g. version: ${SEMVER}
 # Some package managers, like deb, require the version to start with a digit.
 # Hence, you should not prefix the version with 'v'.
-version: 0.7.30
+version: ${SEMVER}
 
 # Version Schema allows you to specify how to parse the version string.
 # Default is `semver`

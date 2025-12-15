@@ -1,6 +1,7 @@
 PKGNAME := esbulk
 TARGETS := esbulk
 VERSION := 0.7.30
+SHELL := /bin/bash
 
 # testing against elasticsearch may require larger amounts of memory
 .PHONY: test
@@ -29,9 +30,8 @@ clean:
 	rm -f coverage.out
 	rm -f $(TARGETS)
 	rm -f esbulk-*.x86_64.rpm
-	rm -f packaging/debian/esbulk_*.deb
+	rm -f esbulk-* .aarch64.rpm
 	rm -f esbulk_*.deb
-	rm -rf packaging/debian/esbulk/usr
 	rm -rf logs/
 
 .PHONY: cover
@@ -59,9 +59,11 @@ rmi:
 
 .PHONY: deb
 deb: $(TARGETS)
-	SEMVER=$(VERSION) nfpm package -p deb
+	GOARCH=amd64 SEMVER=$(VERSION) nfpm package -p deb
+	GOARCH=arm64 SEMVER=$(VERSION) nfpm package -p deb
 
 .PHONY: rpm
 rpm: $(TARGETS)
-	SEMVER=$(VERSION) nfpm package -p rpm
+	GOARCH=amd64 SEMVER=$(VERSION) nfpm package -p rpm
+	GOARCH=arm64 SEMVER=$(VERSION) nfpm package -p rpm
 
