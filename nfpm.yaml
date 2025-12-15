@@ -29,14 +29,14 @@ version_schema: semver
 # Version Epoch.
 # A package with a higher version epoch will always be considered newer.
 # See: https://www.debian.org/doc/debian-policy/ch-controlfields.html#epochs-should-be-used-sparingly
-epoch: 1
+epoch: 0
 
 # Version Release, aka revision.
 # This will expand any env var you set in the field, e.g. release: ${VERSION_RELEASE}
 # This is appended to the `version` after `prerelease`. This should be
 # incremented if you release an updated package of the same upstream version,
 # and it should reset to 1 when bumping the version.
-release: 1
+release: 0
 
 # Section.
 # This is only used by the deb packager.
