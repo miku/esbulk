@@ -44,7 +44,7 @@ import (
 
 var (
 	// Version of application.
-	Version = "0.7.29"
+	Version = "0.7.31"
 
 	ErrIndexNameRequired = errors.New("index name required")
 	ErrNoWorkers         = errors.New("no workers configured")
