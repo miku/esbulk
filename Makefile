@@ -1,6 +1,6 @@
 PKGNAME := esbulk
 TARGETS := esbulk
-VERSION := 0.7.31
+VERSION := 0.7.32
 SHELL := /bin/bash
 
 # testing against elasticsearch may require larger amounts of memory
