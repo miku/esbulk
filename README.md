@@ -49,6 +49,8 @@ Usage
     $ esbulk -h
 	Usage of esbulk:
       -0    set the number of replicas to 0 during indexing
+      -apikey string
+            set the encoded ES api key (mutually exclusive with -u)
       -c string
             create index mappings, settings, aliases, https://is.gd/3zszeu
       -cpuprofile string

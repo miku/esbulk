@@ -59,6 +59,7 @@ type Options struct {
 	Scheme             string // http or https; deprecated, use: Servers.
 	Username           string
 	Password           string
+	ApiKey             string
 	Pipeline           string
 	IncludeTypeName    bool // https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
 	InsecureSkipVerify bool
@@ -113,6 +114,10 @@ func CreateHTTPRequestWithContext(ctx context.Context, method, url string, body 
 	// Set basic authentication if credentials are provided
 	if options.Username != "" && options.Password != "" {
 		req.SetBasicAuth(options.Username, options.Password)
+	}
+	// Or set ApiKey if provided
+	if options.ApiKey != "" {
+		req.Header.Set("Authorization", "ApiKey "+options.ApiKey)
 	}
 
 	// Set content type header (for requests with body)

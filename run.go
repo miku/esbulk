@@ -54,6 +54,7 @@ var (
 // Runner bundles various options. Factored out of a former main func and
 // should be further split up (TODO).
 type Runner struct {
+	ApiKey             string
 	BatchSize          int
 	Config             string
 	CpuProfile         string
@@ -145,6 +146,7 @@ func (r *Runner) Run() (err error) {
 		IDField:            r.IdentifierField,
 		Username:           r.Username,
 		Password:           r.Password,
+		ApiKey:             r.ApiKey,
 		Pipeline:           r.Pipeline,
 		InsecureSkipVerify: r.InsecureSkipVerify,
 		RequestTimeout:     r.RequestTimeout,
