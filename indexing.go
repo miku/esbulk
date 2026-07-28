@@ -485,7 +485,7 @@ func CreateIndex(options Options, body io.Reader) error {
 	}
 	resp, err = client.Do(req)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer resp.Body.Close()
 
