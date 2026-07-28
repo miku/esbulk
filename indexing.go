@@ -31,6 +31,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -40,8 +41,6 @@ import (
 )
 
 var (
-	errParseCannotServerAddr = errors.New("cannot parse server address")
-
 	// Worker errors
 	ErrWorkerCopyFailed = errors.New("worker failed to copy document batch")
 	ErrWorkerBulkIndex  = errors.New("worker bulk index operation failed")
@@ -176,7 +175,7 @@ type BulkResponse struct {
 }
 
 // nestedStr handles nested JSON values.
-func nestedStr(tokstr []string, docmap map[string]any, currentID string) any {
+func nestedStr(tokstr []string, docmap map[string]any) any {
 	tok := tokstr[0]
 	tmps, ok := docmap[tok].(map[string]any)
 	if !ok {
@@ -219,7 +218,7 @@ func extractDocumentID(doc string, idField string) (string, string, error) {
 		var TokenVal any
 
 		if len(tokstr) > 1 {
-			TokenVal = nestedStr(tokstr, docmap, currentID)
+			TokenVal = nestedStr(tokstr, docmap)
 			if TokenVal == nil {
 				return "", "", fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
 			}
@@ -231,31 +230,21 @@ func extractDocumentID(doc string, idField string) (string, string, error) {
 			}
 		}
 
-		// Convert value to string representation
-		switch tempStr1 := any(TokenVal).(type) {
+		// Convert value to string representation. json.Number also satisfies
+		// fmt.Stringer, so it is covered by that case.
+		switch v := TokenVal.(type) {
 		case string:
-			idstr = idstr + tempStr1
+			idstr = idstr + v
 		case fmt.Stringer:
-			idstr = idstr + tempStr1.String()
-		case json.Number:
-			idstr = idstr + tempStr1.String()
+			idstr = idstr + v.String()
 		default:
 			return "", "", fmt.Errorf("cannot convert id value to string")
 		}
 	}
 
-	// Check if any of the fields was named '_id' (special case)
-	var containsUnderscoreID bool
-	for count := range id {
-		if id[count] == "_id" {
-			containsUnderscoreID = true
-			break
-		}
-	}
-
-	// Remove '_id' field from document if it was used for ID extraction
+	// Remove '_id' field from document if it was used for ID extraction.
 	var updatedDoc string
-	if containsUnderscoreID {
+	if slices.Contains(id, "_id") {
 		delete(docmap, "_id")
 		// Marshal the updated document back to string
 		marshaledDoc, err := json.Marshal(docmap)
@@ -455,6 +444,7 @@ func PutMapping(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, resp.Body); err != nil {
@@ -465,7 +455,7 @@ func PutMapping(options Options, body io.Reader) error {
 	if options.Verbose {
 		log.Printf("applied mapping: %s", resp.Status)
 	}
-	return resp.Body.Close()
+	return nil
 }
 
 // CreateIndex creates a new index.
