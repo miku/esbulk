@@ -41,9 +41,10 @@ clean:
 	rm -f coverage.out
 	rm -f $(TARGETS)
 	rm -f esbulk-*.x86_64.rpm
-	rm -f esbulk-* .aarch64.rpm
+	rm -f esbulk-*.aarch64.rpm
 	rm -f esbulk_*.deb
 	rm -rf logs/
+	rm -rf build/
 
 .PHONY: cover
 cover:
@@ -52,6 +53,13 @@ cover:
 
 esbulk:
 	CGO_ENABLED=0 go build -o esbulk cmd/esbulk/main.go
+
+# Cross-compiled linux/amd64 binary used for packaging (deb/rpm), kept in a
+# separate directory so it never overwrites the native dev binary above and
+# the host platform (e.g. macOS arm64) does not leak into the package.
+build/esbulk: cmd/esbulk/main.go
+	@mkdir -p build
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ $<
 
 # ==== packaging ====
 #
@@ -69,12 +77,10 @@ rmi:
 	docker rmi tirtir/esbulk:$(VERSION)
 
 .PHONY: deb
-deb: $(TARGETS)
-	GOARCH=amd64 SEMVER=$(VERSION) nfpm package -p deb
-	GOARCH=arm64 SEMVER=$(VERSION) nfpm package -p deb
+deb: build/esbulk
+	GOARCH=amd64 SEMVER=$(VERSION) nfpm package -p deb -f nfpm.yaml
 
 .PHONY: rpm
-rpm: $(TARGETS)
-	GOARCH=amd64 SEMVER=$(VERSION) nfpm package -p rpm
-	GOARCH=arm64 SEMVER=$(VERSION) nfpm package -p rpm
+rpm: build/esbulk
+	GOARCH=amd64 SEMVER=$(VERSION) nfpm package -p rpm -f nfpm.yaml
 

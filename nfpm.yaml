@@ -7,7 +7,12 @@ arch: ${GOARCH}
 
 # Platform.
 # Examples: `linux` (default), `darwin`
-platform: ${GOOS}
+#
+# Hardcoded to `linux` (rather than ${GOOS}) so the host platform (e.g. macOS)
+# never leaks into the package metadata when deb/rpm are built on a non-Linux
+# host. The packaged binary itself is cross-compiled to linux/amd64 via the
+# `build/esbulk` Makefile target.
+platform: linux
 
 # Version. (required)
 # This will expand any env var you set in the field, e.g. version: ${SEMVER}
@@ -91,7 +96,7 @@ disable_globbing: false
 # Contents to add to the package
 # This can be binaries or any other files.
 contents:
-  - src: esbulk
+  - src: build/esbulk
     dst: /usr/local/bin/esbulk
 
   - src: docs/esbulk.1

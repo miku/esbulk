@@ -25,6 +25,7 @@ _testmain.go
 coverage.out
 
 /esbulk
+/build
 packaging/debian/*deb
 packaging/debian/esbulk/usr/
 esbulk-*rpm
