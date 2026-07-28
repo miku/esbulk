@@ -201,6 +201,23 @@ func (r *Runner) Run() (err error) {
 		wg      sync.WaitGroup
 		errChan = make(chan error, r.NumWorkers)
 	)
+	// Collect worker errors concurrently. A worker can emit more than one
+	// error (one per failed batch), so draining errChan only after wg.Wait
+	// would let the buffered channel fill, block the workers, and in turn
+	// block the reader feeding the queue -- a deadlock. This collector keeps
+	// errChan drained for the duration of the run.
+	var (
+		workerErrors []error
+		errWG        sync.WaitGroup
+	)
+	errWG.Go(func() {
+		for err := range errChan {
+			workerErrors = append(workerErrors, err)
+			if r.Verbose {
+				log.Printf("worker error: %v", err)
+			}
+		}
+	})
 	wg.Add(r.NumWorkers)
 	for i := 0; i < r.NumWorkers; i++ {
 		name := fmt.Sprintf("worker-%d", i)
@@ -307,6 +324,7 @@ readLoop:
 	close(queue)
 	wg.Wait()
 	close(errChan)
+	errWG.Wait() // wait for the collector to finish draining errChan
 
 	// Check for context cancellation first
 	select {
@@ -319,18 +337,13 @@ readLoop:
 		// Continue with error checking
 	}
 
-	// Check for any worker errors that occurred
-	var workerErrors []string
-	for err := range errChan {
-		workerErrors = append(workerErrors, err.Error())
-		if r.Verbose {
-			log.Printf("worker error: %v", err)
-		}
-	}
-
-	// If any worker errors occurred, return them
+	// If any worker errors occurred, return them.
 	if len(workerErrors) > 0 {
-		return fmt.Errorf("worker errors occurred: %s", strings.Join(workerErrors, "; "))
+		msgs := make([]string, len(workerErrors))
+		for i, e := range workerErrors {
+			msgs[i] = e.Error()
+		}
+		return fmt.Errorf("worker errors occurred: %s", strings.Join(msgs, "; "))
 	}
 
 	elapsed := time.Since(start)

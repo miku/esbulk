@@ -355,9 +355,10 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 	return nil
 }
 
-// Worker will batch index documents that come in on the lines channel.
-// Errors are sent to the provided error channel; the function always returns nil
-// to satisfy the WaitGroup contract.
+// Worker will batch index documents that come in on the lines channel. A batch
+// that fails to index is dropped and its error is sent to the provided error
+// channel; the worker then continues with subsequent batches. The function
+// always returns nil to satisfy the WaitGroup contract.
 func Worker(ctx context.Context, id string, options Options, lines chan string, wg *sync.WaitGroup, errChan chan<- error) error {
 	defer wg.Done()
 	var docs []string
@@ -379,14 +380,12 @@ func Worker(ctx context.Context, id string, options Options, lines chan string, 
 				msg := make([]string, len(docs))
 				if n := copy(msg, docs); n != len(docs) {
 					errChan <- fmt.Errorf("worker %s: %w: expected %d, but got %d", id, ErrWorkerCopyFailed, len(docs), n)
-					continue
-				}
-
-				if err := BulkIndex(ctx, msg, options); err != nil {
+				} else if err := BulkIndex(ctx, msg, options); err != nil {
+					// Drop the failed batch and report the error. Retaining it
+					// would let docs grow unbounded while the cluster is
+					// unavailable, defeating streaming.
 					errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
-					continue
-				}
-				if options.Verbose {
+				} else if options.Verbose {
 					log.Printf("[%s] @%d\n", id, counter)
 				}
 				docs = nil
