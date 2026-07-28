@@ -3,7 +3,18 @@ TARGETS := esbulk
 VERSION := 0.7.32
 SHELL := /bin/bash
 
-# testing against elasticsearch may require larger amounts of memory
+# The integration tests spin up elasticsearch via testcontainers and request a
+# 4g JVM heap, so the container runtime needs enough memory. On macOS
+# (Apple Silicon) the default podman machine ships with only 2GiB; give it more
+# before running the tests:
+#
+#     podman machine stop && podman machine set --memory 6144 --cpus 4 && podman machine start
+#
+# Notes (see run_test.go):
+#   - The elasticsearch 5.x/6.x images are amd64-only and are skipped on arm64;
+#     only 7.x/8.x run natively there.
+#   - Under podman the tests auto-set TESTCONTAINERS_RYUK_DISABLED=true, since
+#     the ryuk reaper cannot attach to podman's default network.
 .PHONY: test
 test:
 	go test -cover -v

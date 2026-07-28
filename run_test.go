@@ -27,16 +27,20 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/segmentio/encoding/json"
 	"github.com/sethgrid/pester"
 	"github.com/testcontainers/testcontainers-go"
@@ -80,9 +84,14 @@ func TestIncompleteConfig(t *testing.T) {
 
 // startServer starts an elasticsearch server from image, exposing the http
 // port. Note that the Java heap required may be 2GB or more.
+//
+// The container asks for a 4g heap (see ES_JAVA_OPTS below), so the container
+// runtime must have enough memory. On macOS (Apple Silicon) the default podman
+// machine only has 2GiB; increase it first, e.g.:
+//
+//	podman machine stop && podman machine set --memory 6144 --cpus 4 && podman machine start
 func startServer(ctx context.Context, image string, httpPort int) (testcontainers.Container, error) {
 	var (
-		hp    = fmt.Sprintf("%d:9200/tcp", httpPort)
 		parts = strings.Split(image, ":")
 		tag   string
 	)
@@ -104,12 +113,23 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 				"xpack.security.enabled": "false",
 				"ES_JAVA_OPTS":           "-Xms4g -Xmx4g",
 			},
-			ExposedPorts: []string{hp},
+			// testcontainers-go v0.43 only accepts a bare container port
+			// (or range) here; the host-side mapping is set via PortBindings
+			// in the HostConfigModifier below.
+			ExposedPorts: []string{"9200/tcp"},
 			WaitingFor:   wait.ForLog("started"),
 			// $ docker run --platform linux/amd64 m 8g -e ES_JAVA_OPTS="-Xms512m -Xmx512m" elasticsearch:2.3.4
 			// library initialization failed - unable to allocate file descriptor table - out of memory#
 			HostConfigModifier: func(hc *container.HostConfig) {
 				hc.CgroupnsMode = container.CgroupnsModeHost
+				// Bind container 9200 to the fixed host port httpPort, so the
+				// Runner can reach it at http://localhost:<httpPort>.
+				hc.PortBindings = network.PortMap{
+					network.MustParsePort("9200/tcp"): []network.PortBinding{{
+						HostIP:   netip.MustParseAddr("0.0.0.0"),
+						HostPort: strconv.Itoa(httpPort),
+					}},
+				}
 				hc.Resources = container.Resources{
 					Ulimits: []*container.Ulimit{{
 						Name: "nofile",
@@ -158,14 +178,32 @@ func skipNoDocker(t *testing.T) {
 	_, err = exec.LookPath("podman")
 	if err == nil {
 		t.Logf("podman detected")
-		// DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
-		usr, err := user.Current()
-		if err != nil {
-			t.Logf("cannot get UID, set DOCKER_HOST manually")
+		// Ryuk (the testcontainers resource reaper) fails to start under
+		// podman because it tries to attach to a network named "bridge",
+		// which podman does not provide by default ("network not found").
+		// The tests already Terminate their containers explicitly, so it is
+		// safe to disable the reaper here. Respect an explicit override.
+		if _, set := os.LookupEnv("TESTCONTAINERS_RYUK_DISABLED"); !set {
+			os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
+			t.Logf("disabled testcontainers ryuk reaper (podman)")
+		}
+		// The rootless podman socket lives at a Linux-specific path; on
+		// macOS (and other non-Linux hosts) the socket is elsewhere (e.g.
+		// under the podman machine dir), so let testcontainers auto-detect
+		// it via the default docker socket instead of pointing DOCKER_HOST
+		// at a path that does not exist here.
+		if runtime.GOOS == "linux" {
+			// DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+			usr, err := user.Current()
+			if err != nil {
+				t.Logf("cannot get UID, set DOCKER_HOST manually")
+			} else {
+				sckt := fmt.Sprintf("unix:///run/user/%v/podman/podman.sock", usr.Uid)
+				os.Setenv("DOCKER_HOST", sckt)
+				t.Logf("set DOCKER_HOST to %v", sckt)
+			}
 		} else {
-			sckt := fmt.Sprintf("unix:///run/user/%v/podman/podman.sock", usr.Uid)
-			os.Setenv("DOCKER_HOST", sckt)
-			t.Logf("set DOCKER_HOST to %v", sckt)
+			t.Logf("non-linux host (%s): leaving DOCKER_HOST to testcontainers auto-detection", runtime.GOOS)
 		}
 		noDocker = false
 	}
@@ -192,10 +230,21 @@ func TestMinimalConfig(t *testing.T) {
 		// sha256:357ea8c3d80bc25792e010facfc98aee5972ebc47e290eb0d5aea3671a901cab:
 		// not found
 		// {2, "elasticsearch:2.3.4", 39200},
-		{5, "elasticsearch:5.6.16", 39200},
-		{6, "elasticsearch:6.8.14", 39200},
 		{7, "elasticsearch:7.17.7", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
 		{8, "elasticsearch:8.6.0", 39200},
+	}
+	// The elasticsearch 5.x and 6.x images are only published for amd64;
+	// on other architectures (e.g. arm64/Apple Silicon) they would run
+	// under slow, flaky emulation, if at all. Only test them on amd64.
+	if runtime.GOARCH == "amd64" {
+		imageConf = append([]struct {
+			ElasticsearchMajorVersion int
+			Image                     string
+			HttpPort                  int
+		}{
+			{5, "elasticsearch:5.6.16", 39200},
+			{6, "elasticsearch:6.8.14", 39200},
+		}, imageConf...)
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
