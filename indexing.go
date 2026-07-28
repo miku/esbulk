@@ -65,6 +65,22 @@ type Options struct {
 	InsecureSkipVerify bool
 	// Timeout for HTTP requests (default: 30s)
 	RequestTimeout time.Duration
+	// HTTPClient is the shared client used for all requests. If nil, a
+	// default client is created lazily on first use (see client). Sharing a
+	// single client lets connections be reused (keep-alive) across the many
+	// batch requests issued during a run.
+	HTTPClient *pester.Client
+}
+
+// client returns the shared HTTP client, creating a default one if none was
+// configured. Reusing a single client across requests enables connection
+// keep-alive; a fresh client per request would force a new TCP/TLS handshake
+// every time and can exhaust local ports under load.
+func (o *Options) client() *pester.Client {
+	if o.HTTPClient != nil {
+		return o.HTTPClient
+	}
+	return CreateHTTPClient(o.InsecureSkipVerify, o.RequestTimeout)
 }
 
 // RandomServer returns a random server from the Servers slice.
@@ -318,9 +334,7 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 		return err
 	}
 
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
-
-	response, err := client.Do(req)
+	response, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}
@@ -437,8 +451,7 @@ func PutMapping(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}
@@ -464,7 +477,7 @@ func CreateIndex(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
+	client := options.client()
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -525,8 +538,7 @@ func DeleteIndex(options Options) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}

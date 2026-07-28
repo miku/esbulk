@@ -151,6 +151,11 @@ func (r *Runner) Run() (err error) {
 		InsecureSkipVerify: r.InsecureSkipVerify,
 		RequestTimeout:     r.RequestTimeout,
 	}
+	// Build a single HTTP client and share it across all requests so that
+	// connections are reused (keep-alive) instead of re-established for every
+	// batch. Options is copied by value throughout, but HTTPClient is a
+	// pointer, so every copy shares this one client.
+	options.HTTPClient = CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
 	if r.Verbose {
 		log.Println(options)
 	}
@@ -406,10 +411,7 @@ func indexSettingsRequest(body string, options Options) (*http.Response, error) 
 		return nil, err
 	}
 
-	// Create custom HTTP client if InsecureSkipVerify is true
-	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
-
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return nil, err
 	}
