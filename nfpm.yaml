@@ -36,7 +36,7 @@ epoch: 0
 # This is appended to the `version` after `prerelease`. This should be
 # incremented if you release an updated package of the same upstream version,
 # and it should reset to 1 when bumping the version.
-release: 0
+release: 1
 
 # Section.
 # This is only used by the deb packager.
