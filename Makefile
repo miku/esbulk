@@ -1,6 +1,6 @@
 PKGNAME := esbulk
 TARGETS := esbulk
-VERSION := 0.7.34
+VERSION := 0.7.35
 SHELL := /bin/bash
 
 # The integration tests spin up elasticsearch via testcontainers and request a
