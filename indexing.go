@@ -31,6 +31,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -40,8 +41,6 @@ import (
 )
 
 var (
-	errParseCannotServerAddr = errors.New("cannot parse server address")
-
 	// Worker errors
 	ErrWorkerCopyFailed = errors.New("worker failed to copy document batch")
 	ErrWorkerBulkIndex  = errors.New("worker bulk index operation failed")
@@ -65,6 +64,22 @@ type Options struct {
 	InsecureSkipVerify bool
 	// Timeout for HTTP requests (default: 30s)
 	RequestTimeout time.Duration
+	// HTTPClient is the shared client used for all requests. If nil, a
+	// default client is created lazily on first use (see client). Sharing a
+	// single client lets connections be reused (keep-alive) across the many
+	// batch requests issued during a run.
+	HTTPClient *pester.Client
+}
+
+// client returns the shared HTTP client, creating a default one if none was
+// configured. Reusing a single client across requests enables connection
+// keep-alive; a fresh client per request would force a new TCP/TLS handshake
+// every time and can exhaust local ports under load.
+func (o *Options) client() *pester.Client {
+	if o.HTTPClient != nil {
+		return o.HTTPClient
+	}
+	return CreateHTTPClient(o.InsecureSkipVerify, o.RequestTimeout)
 }
 
 // RandomServer returns a random server from the Servers slice.
@@ -160,7 +175,7 @@ type BulkResponse struct {
 }
 
 // nestedStr handles nested JSON values.
-func nestedStr(tokstr []string, docmap map[string]any, currentID string) any {
+func nestedStr(tokstr []string, docmap map[string]any) any {
 	tok := tokstr[0]
 	tmps, ok := docmap[tok].(map[string]any)
 	if !ok {
@@ -203,7 +218,7 @@ func extractDocumentID(doc string, idField string) (string, string, error) {
 		var TokenVal any
 
 		if len(tokstr) > 1 {
-			TokenVal = nestedStr(tokstr, docmap, currentID)
+			TokenVal = nestedStr(tokstr, docmap)
 			if TokenVal == nil {
 				return "", "", fmt.Errorf("document has no ID field (%s): %s", currentID, doc)
 			}
@@ -215,31 +230,21 @@ func extractDocumentID(doc string, idField string) (string, string, error) {
 			}
 		}
 
-		// Convert value to string representation
-		switch tempStr1 := any(TokenVal).(type) {
+		// Convert value to string representation. json.Number also satisfies
+		// fmt.Stringer, so it is covered by that case.
+		switch v := TokenVal.(type) {
 		case string:
-			idstr = idstr + tempStr1
+			idstr = idstr + v
 		case fmt.Stringer:
-			idstr = idstr + tempStr1.String()
-		case json.Number:
-			idstr = idstr + tempStr1.String()
+			idstr = idstr + v.String()
 		default:
 			return "", "", fmt.Errorf("cannot convert id value to string")
 		}
 	}
 
-	// Check if any of the fields was named '_id' (special case)
-	var containsUnderscoreID bool
-	for count := range id {
-		if id[count] == "_id" {
-			containsUnderscoreID = true
-			break
-		}
-	}
-
-	// Remove '_id' field from document if it was used for ID extraction
+	// Remove '_id' field from document if it was used for ID extraction.
 	var updatedDoc string
-	if containsUnderscoreID {
+	if slices.Contains(id, "_id") {
 		delete(docmap, "_id")
 		// Marshal the updated document back to string
 		marshaledDoc, err := json.Marshal(docmap)
@@ -318,9 +323,7 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 		return err
 	}
 
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
-
-	response, err := client.Do(req)
+	response, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}
@@ -352,9 +355,10 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 	return nil
 }
 
-// Worker will batch index documents that come in on the lines channel.
-// Errors are sent to the provided error channel; the function always returns nil
-// to satisfy the WaitGroup contract.
+// Worker will batch index documents that come in on the lines channel. A batch
+// that fails to index is dropped and its error is sent to the provided error
+// channel; the worker then continues with subsequent batches. The function
+// always returns nil to satisfy the WaitGroup contract.
 func Worker(ctx context.Context, id string, options Options, lines chan string, wg *sync.WaitGroup, errChan chan<- error) error {
 	defer wg.Done()
 	var docs []string
@@ -376,14 +380,12 @@ func Worker(ctx context.Context, id string, options Options, lines chan string, 
 				msg := make([]string, len(docs))
 				if n := copy(msg, docs); n != len(docs) {
 					errChan <- fmt.Errorf("worker %s: %w: expected %d, but got %d", id, ErrWorkerCopyFailed, len(docs), n)
-					continue
-				}
-
-				if err := BulkIndex(ctx, msg, options); err != nil {
+				} else if err := BulkIndex(ctx, msg, options); err != nil {
+					// Drop the failed batch and report the error. Retaining it
+					// would let docs grow unbounded while the cluster is
+					// unavailable, defeating streaming.
 					errChan <- fmt.Errorf("worker %s: %w: %w", id, ErrWorkerBulkIndex, err)
-					continue
-				}
-				if options.Verbose {
+				} else if options.Verbose {
 					log.Printf("[%s] @%d\n", id, counter)
 				}
 				docs = nil
@@ -437,11 +439,11 @@ func PutMapping(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, resp.Body); err != nil {
@@ -452,7 +454,7 @@ func PutMapping(options Options, body io.Reader) error {
 	if options.Verbose {
 		log.Printf("applied mapping: %s", resp.Status)
 	}
-	return resp.Body.Close()
+	return nil
 }
 
 // CreateIndex creates a new index.
@@ -464,7 +466,7 @@ func CreateIndex(options Options, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
+	client := options.client()
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -482,7 +484,7 @@ func CreateIndex(options Options, body io.Reader) error {
 	}
 	resp, err = client.Do(req)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -525,8 +527,7 @@ func DeleteIndex(options Options) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}

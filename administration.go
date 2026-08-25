@@ -36,11 +36,11 @@ func FlushIndex(idx int, options Options) error {
 	if err != nil {
 		return err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if options.Verbose {
 		log.Printf("index flushed: %s\n", resp.Status)
 	}
@@ -48,7 +48,7 @@ func FlushIndex(idx int, options Options) error {
 }
 
 // GetSettings fetches the settings of the index.
-func GetSettings(idx int, options Options) (map[string]interface{}, error) {
+func GetSettings(idx int, options Options) (map[string]any, error) {
 	server := options.Servers[idx]
 	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
 
@@ -56,8 +56,7 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func GetSettings(idx int, options Options) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("could not get settings: %s", link)
 	}
 
-	doc := make(map[string]interface{})
+	doc := make(map[string]any)
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&doc); err != nil {
 		return nil, fmt.Errorf("failed to decode settings: %v", err)

@@ -28,8 +28,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
-	"net/http/httputil"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -151,6 +149,11 @@ func (r *Runner) Run() (err error) {
 		InsecureSkipVerify: r.InsecureSkipVerify,
 		RequestTimeout:     r.RequestTimeout,
 	}
+	// Build a single HTTP client and share it across all requests so that
+	// connections are reused (keep-alive) instead of re-established for every
+	// batch. Options is copied by value throughout, but HTTPClient is a
+	// pointer, so every copy shares this one client.
+	options.HTTPClient = CreateHTTPClient(options.InsecureSkipVerify, options.RequestTimeout)
 	if r.Verbose {
 		log.Println(options)
 	}
@@ -198,6 +201,23 @@ func (r *Runner) Run() (err error) {
 		wg      sync.WaitGroup
 		errChan = make(chan error, r.NumWorkers)
 	)
+	// Collect worker errors concurrently. A worker can emit more than one
+	// error (one per failed batch), so draining errChan only after wg.Wait
+	// would let the buffered channel fill, block the workers, and in turn
+	// block the reader feeding the queue -- a deadlock. This collector keeps
+	// errChan drained for the duration of the run.
+	var (
+		workerErrors []error
+		errWG        sync.WaitGroup
+	)
+	errWG.Go(func() {
+		for err := range errChan {
+			workerErrors = append(workerErrors, err)
+			if r.Verbose {
+				log.Printf("worker error: %v", err)
+			}
+		}
+	})
 	wg.Add(r.NumWorkers)
 	for i := 0; i < r.NumWorkers; i++ {
 		name := fmt.Sprintf("worker-%d", i)
@@ -206,7 +226,7 @@ func (r *Runner) Run() (err error) {
 	if r.Verbose {
 		log.Printf("started %d workers", r.NumWorkers)
 	}
-	for i, _ := range options.Servers {
+	for i := range options.Servers {
 		// Store number_of_replicas settings for restoration later.
 		doc, err := GetSettings(i, options)
 		if err != nil {
@@ -225,31 +245,23 @@ func (r *Runner) Run() (err error) {
 		// Shutdown procedure. TODO(miku): Handle signals, too.
 		defer func() {
 			// Realtime search.
-			if _, err = indexSettingsRequest(fmt.Sprintf(`{"index": {"refresh_interval": "%s"}}`, r.RefreshInterval), options); err != nil {
+			if err = indexSettingsRequest(fmt.Sprintf(`{"index": {"refresh_interval": "%s"}}`, r.RefreshInterval), options); err != nil {
 				return
 			}
 			// Reset number of replicas.
-			if _, err = indexSettingsRequest(fmt.Sprintf(`{"index": {"number_of_replicas": %q}}`, numberOfReplicas), options); err != nil {
+			if err = indexSettingsRequest(fmt.Sprintf(`{"index": {"number_of_replicas": %q}}`, numberOfReplicas), options); err != nil {
 				return
 			}
 			// Persist documents.
 			err = FlushIndex(i, options)
 		}()
 		// Realtime search.
-		resp, err := indexSettingsRequest(`{"index": {"refresh_interval": "-1"}}`, options)
-		if err != nil {
+		if err := indexSettingsRequest(`{"index": {"refresh_interval": "-1"}}`, options); err != nil {
 			return err
-		}
-		if resp.StatusCode >= 400 {
-			b, err := httputil.DumpResponse(resp, true)
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("got %v: %v", resp.StatusCode, string(b))
 		}
 		if r.ZeroReplica {
 			// Reset number of replicas.
-			if _, err := indexSettingsRequest(`{"index": {"number_of_replicas": 0}}`, options); err != nil {
+			if err := indexSettingsRequest(`{"index": {"number_of_replicas": 0}}`, options); err != nil {
 				return err
 			}
 		}
@@ -312,6 +324,7 @@ readLoop:
 	close(queue)
 	wg.Wait()
 	close(errChan)
+	errWG.Wait() // wait for the collector to finish draining errChan
 
 	// Check for context cancellation first
 	select {
@@ -324,18 +337,13 @@ readLoop:
 		// Continue with error checking
 	}
 
-	// Check for any worker errors that occurred
-	var workerErrors []string
-	for err := range errChan {
-		workerErrors = append(workerErrors, err.Error())
-		if r.Verbose {
-			log.Printf("worker error: %v", err)
-		}
-	}
-
-	// If any worker errors occurred, return them
+	// If any worker errors occurred, return them.
 	if len(workerErrors) > 0 {
-		return fmt.Errorf("worker errors occurred: %s", strings.Join(workerErrors, "; "))
+		msgs := make([]string, len(workerErrors))
+		for i, e := range workerErrors {
+			msgs[i] = e.Error()
+		}
+		return fmt.Errorf("worker errors occurred: %s", strings.Join(msgs, "; "))
 	}
 
 	elapsed := time.Since(start)
@@ -360,12 +368,12 @@ readLoop:
 
 // getNumberOfReplicas safely extracts the number_of_replicas setting from the Elasticsearch settings response.
 // The expected structure is: map[indexName] -> settings -> index -> number_of_replicas
-func getNumberOfReplicas(doc map[string]interface{}, indexName string) (interface{}, error) {
+func getNumberOfReplicas(doc map[string]any, indexName string) (any, error) {
 	index, ok := doc[indexName]
 	if !ok {
 		return nil, fmt.Errorf("index %s not found in settings response", indexName)
 	}
-	indexMap, ok := index.(map[string]interface{})
+	indexMap, ok := index.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("expected map for index %s, got %T", indexName, index)
 	}
@@ -373,7 +381,7 @@ func getNumberOfReplicas(doc map[string]interface{}, indexName string) (interfac
 	if !ok {
 		return nil, fmt.Errorf("settings not found for index %s", indexName)
 	}
-	settingsMap, ok := settings.(map[string]interface{})
+	settingsMap, ok := settings.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("expected map for settings, got %T", settings)
 	}
@@ -381,7 +389,7 @@ func getNumberOfReplicas(doc map[string]interface{}, indexName string) (interfac
 	if !ok {
 		return nil, fmt.Errorf("index settings not found for index %s", indexName)
 	}
-	indexSettingsMap, ok := indexSettings.(map[string]interface{})
+	indexSettingsMap, ok := indexSettings.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("expected map for index settings, got %T", indexSettings)
 	}
@@ -392,31 +400,36 @@ func getNumberOfReplicas(doc map[string]interface{}, indexName string) (interfac
 	return numberOfReplicas, nil
 }
 
-// indexSettingsRequest runs updates an index setting, given a body and
-// options. Body consist of the JSON document, e.g. `{"index":
-// {"refresh_interval": "1s"}}`.
-func indexSettingsRequest(body string, options Options) (*http.Response, error) {
-	r := strings.NewReader(body)
-
+// indexSettingsRequest updates an index setting, given a body and options.
+// Body is the JSON document, e.g. `{"index": {"refresh_interval": "1s"}}`. The
+// response body is always drained and closed; a non-2xx status is reported as
+// an error that includes the response body.
+func indexSettingsRequest(body string, options Options) error {
 	server := options.RandomServer()
 	link := fmt.Sprintf("%s/%s/_settings", server, options.Index)
 
-	req, err := CreateHTTPRequest("PUT", link, r, options)
+	req, err := CreateHTTPRequest("PUT", link, strings.NewReader(body), options)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Create custom HTTP client if InsecureSkipVerify is true
-	client := CreateHTTPClient(options.InsecureSkipVerify, 0) // Using default timeout
-
-	resp, err := client.Do(req)
+	resp, err := options.client().Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	defer resp.Body.Close()
+
 	if options.Verbose {
 		log.Printf("applied setting: %s with status %s\n", body, resp.Status)
 	}
-	return resp, nil
+	if resp.StatusCode >= 400 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("index settings request failed with %d: %s", resp.StatusCode, string(b))
+	}
+	return nil
 }
 
 // isJSON checks if a string is valid json.
