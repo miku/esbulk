@@ -28,12 +28,11 @@ fmt:
 	go fmt ./...
 
 .PHONY: all
-all: fmt test
-	go build -o esbulk cmd/esbulk/main.go
+all: fmt test esbulk
 
 .PHONY: install
 install:
-	go install
+	go install -ldflags "-X github.com/miku/esbulk.Version=$(VERSION)"
 
 .PHONY: clean
 clean:
@@ -52,14 +51,14 @@ cover:
 	go tool cover -html=coverage.out
 
 esbulk:
-	CGO_ENABLED=0 go build -o esbulk cmd/esbulk/main.go
+	CGO_ENABLED=0 go build -ldflags "-X github.com/miku/esbulk.Version=$(VERSION)" -o esbulk cmd/esbulk/main.go
 
 # Cross-compiled linux/amd64 binary used for packaging (deb/rpm), kept in a
 # separate directory so it never overwrites the native dev binary above and
 # the host platform (e.g. macOS arm64) does not leak into the package.
 build/esbulk: cmd/esbulk/main.go
 	@mkdir -p build
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ $<
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/miku/esbulk.Version=$(VERSION)" -o $@ $<
 
 # ==== packaging ====
 #
