@@ -41,8 +41,8 @@ import (
 )
 
 var (
-	// Version of application.
-	Version = "0.7.31"
+	// Version of application, set from the Makefile via -ldflags.
+	Version = ""
 
 	ErrIndexNameRequired = errors.New("index name required")
 	ErrNoWorkers         = errors.New("no workers configured")
