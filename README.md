@@ -84,6 +84,8 @@ Usage
             bulk batch size (default 1000)
       -skipbroken
             skip broken json
+      -summary
+            print a final stats summary (docs, time, docs/s)
       -timeout duration
             timeout for HTTP requests (default 30s)
       -type string

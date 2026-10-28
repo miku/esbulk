@@ -43,6 +43,7 @@ var (
 	batchSize          = flag.Int("size", 1000, "bulk batch size")
 	numWorkers         = flag.Int("w", runtime.NumCPU(), "number of workers to use")
 	verbose            = flag.Bool("verbose", false, "output basic progress")
+	summary            = flag.Bool("summary", false, "print a final stats summary (docs, time, docs/s)")
 	skipbroken         = flag.Bool("skipbroken", false, "skip broken json")
 	gzipped            = flag.Bool("z", false, "unzip gz'd file on the fly")
 	mapping            = flag.String("mapping", "", "mapping string or filename to apply before indexing")
@@ -117,6 +118,7 @@ func main() {
 		Servers:            serverFlags,
 		ShowVersion:        *version,
 		SkipBroken:         *skipbroken,
+		Summary:            *summary,
 		Username:           username,
 		Verbose:            *verbose,
 		ZeroReplica:        *zeroReplica,
