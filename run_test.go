@@ -25,7 +25,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/netip"
 	"net/url"
@@ -150,7 +149,7 @@ func startServer(ctx context.Context, image string, httpPort int) (testcontainer
 // logReader reads data from reader and bot logs it and returns it. Fails, if
 // reading fails.
 func logReader(t *testing.T, r io.Reader) []byte {
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		t.Fatalf("read failed: %s", err)
 		return nil
@@ -220,31 +219,9 @@ func TestMinimalConfig(t *testing.T) {
 		Image                     string
 		HttpPort                  int
 	}{
-		// $ docker pull elasticsearch:2.3.4
-		// 2.3.4: Pulling from library/elasticsearch
-		// ca69fe441e9d: Already exists
-		// failed to unpack image on snapshotter overlayfs: apply layer error
-		// for "docker.io/library/elasticsearch:2.3.4": failed to extract layer
-		// sha256:2f71b45e4e254ddceb187b1467f5471f0e14d7124ac2dd7fdd7ddbc76e13f0e5:
-		// NotFound: failed to get reader from content store: content digest
-		// sha256:357ea8c3d80bc25792e010facfc98aee5972ebc47e290eb0d5aea3671a901cab:
-		// not found
-		// {2, "elasticsearch:2.3.4", 39200},
-		{7, "elasticsearch:7.17.7", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
-		{8, "elasticsearch:8.6.0", 39200},
-	}
-	// The elasticsearch 5.x and 6.x images are only published for amd64;
-	// on other architectures (e.g. arm64/Apple Silicon) they would run
-	// under slow, flaky emulation, if at all. Only test them on amd64.
-	if runtime.GOARCH == "amd64" {
-		imageConf = append([]struct {
-			ElasticsearchMajorVersion int
-			Image                     string
-			HttpPort                  int
-		}{
-			{5, "elasticsearch:5.6.16", 39200},
-			{6, "elasticsearch:6.8.14", 39200},
-		}, imageConf...)
+
+		{8, "elasticsearch:8.19.23", 39200}, // https://is.gd/MPwhaM, https://is.gd/RJ4LOZ, ...
+		{9, "elasticsearch:9.5.5", 39200},
 	}
 	log.Printf("testing %d versions: %v", len(imageConf), imageConf)
 	for _, conf := range imageConf {
@@ -290,9 +267,7 @@ func TestMinimalConfig(t *testing.T) {
 					File:            f,
 					Verbose:         true,
 				}
-				if conf.ElasticsearchMajorVersion < 7 {
-					r.DocType = "any" // deprecated with ES7, fails with ES8
-				}
+
 				err = r.Run()
 				if err != c.err {
 					return fmt.Errorf("got %v, want %v", err, c.err)
@@ -305,17 +280,17 @@ func TestMinimalConfig(t *testing.T) {
 				defer resp.Body.Close()
 				b := logReader(t, resp.Body)
 				var (
-					sr7 SearchResponse7
-					sr6 SearchResponse6
+					sr8 SearchResponse
+					sr9 SearchResponse
 				)
-				if err = json.Unmarshal(b, &sr7); err != nil {
-					if err = json.Unmarshal(b, &sr6); err != nil {
-						t.Errorf("could not parse json response (6, 7): %v", err)
+				if err = json.Unmarshal(b, &sr9); err != nil {
+					if err = json.Unmarshal(b, &sr8); err != nil {
+						t.Errorf("could not parse json response (8, 9): %v", err)
 					} else {
-						t.Log("es6 detected")
+						t.Log("deprecated es detected")
 					}
 				}
-				if sr7.Hits.Total.Value != c.numDocs && sr6.Hits.Total != c.numDocs {
+				if sr8.Hits.Total.Value != c.numDocs && sr9.Hits.Total.Value != c.numDocs {
 					t.Errorf("expected %d docs", c.numDocs)
 				}
 			}
@@ -413,45 +388,21 @@ func TestGH32(t *testing.T) {
 	}
 }
 
-type SearchResponse6 struct {
+type SearchResponse struct {
 	Hits struct {
 		Hits []struct {
-			Id     string  `json:"_id"`
+			ID     string  `json:"_id"`
 			Index  string  `json:"_index"`
 			Score  float64 `json:"_score"`
 			Source struct {
 				V string `json:"v"`
 			} `json:"_source"`
-			Type string `json:"_type"`
+			Type string `json:"_type,omitempty"`
 		} `json:"hits"`
-		MaxScore float64 `json:"max_score"`
-		Total    int64   `json:"total"`
-	} `json:"hits"`
-	Shards struct {
-		Failed     int64 `json:"failed"`
-		Skipped    int64 `json:"skipped"`
-		Successful int64 `json:"successful"`
-		Total      int64 `json:"total"`
-	} `json:"_shards"`
-	TimedOut bool  `json:"timed_out"`
-	Took     int64 `json:"took"`
-}
-
-type SearchResponse7 struct {
-	Hits struct {
-		Hits []struct {
-			Id     string  `json:"_id"`
-			Index  string  `json:"_index"`
-			Score  float64 `json:"_score"`
-			Source struct {
-				V string `json:"v"`
-			} `json:"_source"`
-			Type string `json:"_type"`
-		} `json:"hits"`
-		MaxScore float64 `json:"max_score"`
+		MaxScore *float64 `json:"max_score"`
 		Total    struct {
-			Relation string `json:"relation"`
 			Value    int64  `json:"value"`
+			Relation string `json:"relation"`
 		} `json:"total"`
 	} `json:"hits"`
 	Shards struct {
