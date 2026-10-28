@@ -69,6 +69,9 @@ OPTIONS
 `-skipbroken`
   Skip broken json.
 
+`-summary`
+  Print a final stats summary (docs, time, docs/s).
+
 `-type` *string*
   Elasticsearch type (deprecated in 6.0.0, https://is.gd/HFsOWt), empty string.
 

@@ -75,6 +75,7 @@ type Runner struct {
 	Settings           string
 	ShowVersion        bool
 	SkipBroken         bool
+	Summary            bool
 	Username           string
 	Verbose            bool
 	InsecureSkipVerify bool
@@ -355,7 +356,7 @@ readLoop:
 		pprof.WriteHeapProfile(f)
 		f.Close()
 	}
-	if r.Verbose {
+	if r.Verbose || r.Summary {
 		elapsed := elapsed.Seconds()
 		if elapsed < 0.1 {
 			elapsed = 0.1
