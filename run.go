@@ -57,7 +57,6 @@ type Runner struct {
 	Config             string
 	CpuProfile         string
 	OpType             string
-	DocType            string
 	File               *os.File
 	FileGzipped        bool
 	IdentifierField    string
@@ -137,7 +136,6 @@ func (r *Runner) Run() (err error) {
 		Servers:            r.Servers,
 		Index:              r.IndexName,
 		OpType:             r.OpType,
-		DocType:            r.DocType,
 		BatchSize:          r.BatchSize,
 		Verbose:            r.Verbose,
 		Scheme:             "http", // deprecated
