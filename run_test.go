@@ -290,9 +290,6 @@ func TestMinimalConfig(t *testing.T) {
 					File:            f,
 					Verbose:         true,
 				}
-				if conf.ElasticsearchMajorVersion < 7 {
-					r.DocType = "any" // deprecated with ES7, fails with ES8
-				}
 				err = r.Run()
 				if err != c.err {
 					return fmt.Errorf("got %v, want %v", err, c.err)
@@ -385,7 +382,6 @@ func TestGH32(t *testing.T) {
 		RefreshInterval: "1s",
 		Mapping:         `{}`,
 		IndexName:       "abc",
-		DocType:         "any", // deprecated with ES7
 		File:            f,
 		Verbose:         true,
 	}
@@ -396,7 +392,6 @@ func TestGH32(t *testing.T) {
 	} else {
 		t.Fatalf("expected fail, see #32")
 	}
-	// w/o doctype, we should be good
 	r = Runner{
 		Servers:         []string{"http://localhost:39200"},
 		BatchSize:       5000,

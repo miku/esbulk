@@ -51,7 +51,6 @@ type Options struct {
 	Servers            []string
 	Index              string
 	OpType             string
-	DocType            string
 	BatchSize          int
 	Verbose            bool
 	IDField            string
@@ -276,12 +275,7 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 		if len(strings.TrimSpace(doc)) == 0 {
 			continue
 		}
-		var header string
-		if options.DocType == "" {
-			header = fmt.Sprintf(`{"%s": {"_index": "%s"}}`, options.OpType, options.Index)
-		} else {
-			header = fmt.Sprintf(`{"%s": {"_index": "%s", "_type": "%s"}}`, options.OpType, options.Index, options.DocType)
-		}
+		header := fmt.Sprintf(`{"%s": {"_index": "%s"}}`, options.OpType, options.Index)
 
 		// If an "-id" is given, peek into the document to extract the ID and
 		// use it in the header.
@@ -294,12 +288,7 @@ func BulkIndex(ctx context.Context, docs []string, options Options) error {
 				doc = updatedDoc
 			}
 
-			if options.DocType == "" {
-				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_id": %q}}`, options.OpType, options.Index, idStr)
-			} else {
-				header = fmt.Sprintf(`{"%s": {"_index": "%s", "_type": "%s", "_id": %q}}`,
-					options.OpType, options.Index, options.DocType, idStr)
-			}
+			header = fmt.Sprintf(`{"%s": {"_index": "%s", "_id": %q}}`, options.OpType, options.Index, idStr)
 		}
 
 		if options.OpType == "update" {
@@ -420,17 +409,7 @@ processRemaining:
 func PutMapping(options Options, body io.Reader) error {
 
 	server := options.RandomServer()
-	var link string
-	if options.DocType == "" {
-		link = fmt.Sprintf("%s/%s/_mapping", server, options.Index)
-	} else {
-		if options.IncludeTypeName {
-			// https://www.elastic.co/blog/moving-from-types-to-typeless-apis-in-elasticsearch-7-0
-			link = fmt.Sprintf("%s/%s/_mapping/%s?include_type_name=true", server, options.Index, options.DocType)
-		} else {
-			link = fmt.Sprintf("%s/%s/_mapping/%s", server, options.Index, options.DocType)
-		}
-	}
+	link := fmt.Sprintf("%s/%s/_mapping", server, options.Index)
 
 	if options.Verbose {
 		log.Printf("applying mapping: %s", link)
